@@ -190,6 +190,7 @@ Now that we have simulated MHW triangles, we need to add these on top of a typic
 
 ```{r,echo=F,warning=F,include=F}
 ## function for creating sine wave
+##function from user beckmw https://www.r-bloggers.com/2017/04/predicting-tides-in-r/
 waves <- function(date_start,date_end, alpha = 0, beta = 1, freq = 24, phi = 0){
   
   start <- as.POSIXct(date_start)
@@ -238,7 +239,7 @@ for (xx in 1:length(alpha_list)){
                   "thresh_3x"=(((year_thresh$vals-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals,
                   "thresh_4x"=(((((year_thresh$vals-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals)
 
-ggplot()+geom_line(data=clim,aes(x=t,y=temp),alpha=0.3)+geom_line(data=clim,aes(x=t,y=thresh),color="yellow")+geom_line(data=clim,aes(x=t,y=seas),color="black")+geom_line(data=clim,aes(x=t,y=thresh_2x),color="orange")+geom_line(data=clim,aes(x=t,y=thresh_3x),color="red")+geom_line(data=clim,aes(x=t,y=thresh_4x),color="purple")
+ggplot()+geom_line(data=clim,aes(x=t,y=temp),alpha=0.3)+geom_line(data=clim,aes(x=t,y=thresh),color="goldenrod2")+geom_line(data=clim,aes(x=t,y=seas),color="black")+geom_line(data=clim,aes(x=t,y=thresh_2x),color="orangered")+geom_line(data=clim,aes(x=t,y=thresh_3x),color="firebrick4")+geom_line(data=clim,aes(x=t,y=thresh_4x),color="purple")
 
 out_res<-clim%>%rename("datetime"=t,"vals"=temp)
 merged_temp_tri<-vector("list",length(unique(tri_data$reps)))
@@ -543,19 +544,21 @@ category_prop_species$label<-ifelse(category_prop_species$species=="highct_highz
 
 
 species_heatmap_plot<-ggplot(category_prop_species,aes(x=hours_dur,y=magnitude,z=cum.mort,group=species))+geom_tile(aes(fill=cum.mort,color=category),size=0.5)+scale_fill_viridis_c()+theme_classic()+geom_contour(color="white")+ geom_text_contour(aes(z = cum.mort),color="white",fontface="bold")+
-  scale_color_brewer(palette="YlOrRd")+
+  #scale_color_brewer(palette="YlOrRd")+
+  scale_color_manual(values=c("cornsilk3","goldenrod2","orangered","firebrick4","purple"))+
   labs(color="MHW Category", fill="Survival (%)")+
   geom_segment(x=5*24,xend=5*24,y=.75,yend=8.25,color="blue",linetype="dashed",linewidth=.75)+
   xlab("Duration (hours)")+facet_wrap(.~label)+
   geom_segment(x=5*24,xend=721,y=.75,yend=.75,color="blue",linetype="dashed",linewidth=.75)+
-  ggtitle("Species Adaptation Strategies")+ylab("Magnitude (°C)")
+  ylab("Magnitude (°C)")
 
 species_heatmap_plot
 #ggsave(path = "result_figs",filename="species_heatmap.tif", device='tiff', dpi=300,width=8,height=4,units="in")
 
 #without categories
 plotnocat<-ggplot(category_prop_species,aes(x=hours_dur,y=magnitude,z=cum.mort,group=label))+geom_tile(aes(fill=cum.mort),linewidth=0.5)+scale_fill_viridis_c()+theme_classic()+geom_contour(color="black")+ geom_text_contour(aes(z = cum.mort),color="black",fontface="bold")+
-  scale_color_brewer(palette="YlOrRd")+
+  #scale_color_brewer(palette="YlOrRd")+
+    scale_color_manual(values=c("cornsilk3","goldenrod2","orangered","firebrick4","purple"))+
   labs(color="MHW Category", fill="Survival (%)")+xlab("Duration (hours)")+ 
   facet_wrap(.~label)
   
@@ -757,13 +760,14 @@ facet_hlines <- category_prop_alphas %>%
   distinct(nomhw, label)
 
 annual_var_heatmap<-ggplot(category_prop_alphas,aes(x=hour_dur,y=magnitude,z=cum.mort,group=label))+geom_tile(aes(fill=cum.mort,color=category),size=0.5)+scale_fill_viridis_c()+theme_classic()+geom_contour(color="white")+ geom_text_contour(aes(z = cum.mort),color="white",fontface="bold")+
-  scale_color_brewer(palette="YlOrRd")+
+  #scale_color_brewer(palette="YlOrRd")+
+    scale_color_manual(values=c("cornsilk3","goldenrod2","orangered","firebrick4","purple"))+
   labs(color="MHW Category", fill="Survival (%)")+
   geom_segment(data = facet_hlines, aes(y = nomhw,yend=8.25,x=5*24,xend=5*24), color = "blue", linetype = "dashed", linewidth = .75,inherit.aes=F)+
   xlab("Duration (hours)")+
   ylab("Magnitude (°C)")+  facet_grid(. ~ label, scales = "free_x", space = "free_x") +  
-  geom_segment(data = facet_hlines, aes(y = nomhw,yend=nomhw,x=5*24,xend=721), color = "blue", linetype = "dashed", linewidth = .75,inherit.aes=F)+
-  ggtitle("Annual Variation")
+  geom_segment(data = facet_hlines, aes(y = nomhw,yend=nomhw,x=5*24,xend=721), color = "blue", linetype = "dashed", linewidth = .75,inherit.aes=F)
+  #ggtitle("Annual Variation")
 
 annual_var_heatmap
 
@@ -800,7 +804,9 @@ group_by(ceilingmort_f,category, label) %>%
 summarise(total_leveldens = sum(leveldens, na.rm = TRUE))
 
 annual_var_barplot<-result%>%ggplot()+geom_bar(aes(y=total_leveldens,x=category,fill=ceilingmort_f),position='stack',stat='identity')+
-  scale_fill_viridis_d(direction=-1)+labs(x="MHW Category",y="Survival Isocline Proportion",fill="Survival Isoclines")+theme_classic()+facet_wrap(.~label)+ggtitle("Annual Variation")+theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+  scale_fill_viridis_d(direction=-1)+labs(x="MHW Category",y="Survival Isocline Proportion",fill="Survival Isoclines")+theme_classic()+facet_wrap(.~label)+
+  #ggtitle("Annual Variation")+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
 annual_var_barplot
 
@@ -1211,8 +1217,8 @@ occ_plot<-ggplot(data=allseasons_bound_hour)+
   geom_line(aes(x=datetime,y=thresh_4x,color="IV Extreme"),linetype=2,linewidth=1,inherit.aes = F)+
   geom_line(aes(x=datetime,y=clim_temp,color="Climatology"),inherit.aes = F)+
   scale_color_manual(values=c("Climatology"="black",
-                              "I Moderate"="yellow","II Strong"="orange","III Severe"="red",
-                              "IV Extreme"='purple',"Simulated MHW"="darkgray"))+
+                              "I Moderate"="goldenrod2","II Strong"="orangered","III Severe"="firebrick4",
+                              "IV Extreme"='purple',"Simulated MHW"="cornsilk3"))+
   theme(legend.title=element_blank())
 
 mhwcat.legend<-get_legend(occ_plot)
@@ -1222,9 +1228,9 @@ occ_plot2<-ggplot(data=allseasons_bound_hour,aes(x=datetime,y=merged_temp))+
   scico::scale_color_scico(palette = "lajolla")+
   labs(x="Date",y="Temperature (°C)",color="Magnitude (°C)")+
   theme_classic()+
-  geom_line(aes(x=datetime,y=thresh),color="yellow",linetype=2,linewidth=1,inherit.aes = F)+
-  geom_line(aes(x=datetime,y=thresh_2x),color="orange",linetype=2,linewidth=1,inherit.aes = F)+
-  geom_line(aes(x=datetime,y=thresh_3x),color="red",linetype=2,linewidth=1,inherit.aes = F)+
+  geom_line(aes(x=datetime,y=thresh),color="goldenrod2",linetype=2,linewidth=1,inherit.aes = F)+
+  geom_line(aes(x=datetime,y=thresh_2x),color="orangered",linetype=2,linewidth=1,inherit.aes = F)+
+  geom_line(aes(x=datetime,y=thresh_3x),color="firebrick4",linetype=2,linewidth=1,inherit.aes = F)+
   geom_line(aes(x=datetime,y=thresh_4x),color="purple",linetype=2,linewidth=1,inherit.aes = F)+
   geom_line(aes(x=datetime,y=clim_temp),color="black",inherit.aes = F)+
   geom_point(data=alignment_points_df,aes(x=datetime,y=clim_temp),color="black",fill="white",inherit.aes=F,shape=21)

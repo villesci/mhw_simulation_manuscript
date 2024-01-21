@@ -29,7 +29,7 @@ source("Thermal_landscape_functions.R")
 options(scipen=999)
 set.seed(123)
 
-
+#function from user beckmw https://www.r-bloggers.com/2017/04/predicting-tides-in-r/
     waves <- function(date_start,date_end, alpha = 0, beta = 1, freq = 24, phi = 0){
       
       start <- as.POSIXct(date_start)
@@ -272,7 +272,7 @@ f_dowle3 = function(DT) {
     joined_df_short$p_severe<-event_categoriesi$p_severe
     joined_df_short$p_extreme<-event_categoriesi$p_extreme
     
-    
+    #joined_df_short %>% mutate(group = factor(group, levels = c('1', '0')))
     maxtemp<-out_res%>%filter(datetime>as.POSIXct('2022-01-01 00:00:00'))%>%filter(vals==max(vals))%>%select(vals)
 
       B<-ggplot(data=joined_df_short,aes(x=time,y=temp))+
@@ -281,28 +281,28 @@ f_dowle3 = function(DT) {
       geom_flame(aes(y2=thresh_3x,fill="III Severe"))+
       geom_flame(aes(y2=thresh_4x,fill="IV Extreme"))+
       geom_line(aes(x=time,y=seas,color="Climatology"),linetype=2,linewidth=1)+
-      geom_line(aes(x=time,y=thresh,color="I Moderate"),linetype=2,linewidth=1)+
-      geom_line(aes(x=time,y=thresh_2x,color="II Strong"),linetype=2,linewidth=1)+
-      geom_line(aes(x=time,y=thresh_3x,color="III Severe"),linetype=2,linewidth=1)+
-      geom_line(aes(x=time,y=thresh_4x,color="IV Extreme"),linetype=2,linewidth=1)+
+      geom_line(aes(x=time,y=thresh,color="90% Threshold"),linetype=2,linewidth=1)+
+      geom_line(aes(x=time,y=thresh_2x,color="2x Threshold"),linetype=2,linewidth=1)+
+      geom_line(aes(x=time,y=thresh_3x,color="3x Threshold"),linetype=2,linewidth=1)+
+      geom_line(aes(x=time,y=thresh_4x,color="4x Threshold"),linetype=2,linewidth=1)+
       geom_line(aes(x=time,y=temp,color="Observed Temperature"))+
       scale_color_manual(values=c("Climatology"="darkgray","Observed Temperature"="black",
-                                  "I Moderate"="yellow","II Strong"="orange","III Severe"="red",
-                                  "IV Extreme"='purple'))+
-      scale_fill_manual(values=c("I Moderate"=alpha("yellow",0.5),"II Strong"=alpha("orange",0.5),
-                                 "III Severe"=alpha("red",0.5),"IV Extreme"=alpha('purple',0.5)))+
+                                  "90% Threshold"="goldenrod2","2x Threshold"="orangered","3x Threshold"="firebrick4",
+                                  "4x Threshold"='purple'),
+                        breaks = c("90% Threshold", "2x Threshold", "3x Threshold", "4x Threshold", "Observed Temperature","Climatology"))+
+      scale_fill_manual(values=c("I Moderate"=alpha("goldenrod2",0.5),"II Strong"=alpha("orangered",0.5),
+                                 "III Severe"=alpha("firebrick4",0.5),"IV Extreme"=alpha('purple',0.5)))+
       theme_classic()+labs(x="Time",y="Temperature (°C)")+
         geom_blank(aes(color="Climatology"))+
       geom_blank(aes(fill="Observed Temperature",value="black"))+
-        guides(fill="none")+
+        #guides(fill="none")+
         theme(legend.title=element_blank(),axis.title.x=element_blank())+
       geom_segment(aes(x=maxtemptime,xend=maxtemptime,y=26,yend=max(temp)),linetype=3)+
       geom_segment(aes(x=maxtemptime-lubridate::days(5),xend=maxtemptime+lubridate::days(5),y=26,yend=26),linetype=3)+
-      
-      annotate("text",x=start_date_mhw-lubridate::days(5),y=26.5,label="MHW Duration =\n 10 days",size=4,fontface="italic")+
-      annotate("text",x=end_date_mhw+lubridate::days(5),y=30,label="Magnitude = 5°C ",size=4,fontface="italic")+
-      geom_segment(aes(x=start_date_mhw-lubridate::days(2),xend=maxtemptime-lubridate::hours(2),y=26.5,yend=26),arrow=arrow(length=unit(0.2,"cm")))+
-      
+      scale_y_continuous(limits=c(25.25,31))+
+      annotate("text",x=maxtemptime,y=25.4,label="MHW Duration = 10 days",size=4,fontface="italic")+
+      annotate("text",x=end_date_mhw+lubridate::days(5),y=30,label="Magnitude =\n 5°C ",size=4,fontface="italic")+
+      geom_segment(aes(x=maxtemptime,xend=maxtemptime-lubridate::hours(2),y=25.6,yend=25.95),arrow=arrow(length=unit(0.2,"cm")))+
       geom_segment(aes(x=end_date_mhw,xend=maxtemptime+lubridate::minutes(30),y=30,yend=29.2),arrow=arrow(length=unit(0.2,"cm")))
     
     
@@ -321,7 +321,7 @@ Here, we demonstrate the curve for our acute tolerator (high CTmax, high z)
 set.seed(123)
 
 
-#onlt the first hypothetical species is used
+#only the first hypothetical species is used
 example_TDT<-data.frame("species"=c("highct_highz"),"z"=c(5.25),"ctmax"=c(46))
 
 
