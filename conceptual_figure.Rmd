@@ -290,8 +290,8 @@ f_dowle3 = function(DT) {
                                   "90% Threshold"="goldenrod2","2x Threshold"="orangered","3x Threshold"="firebrick4",
                                   "4x Threshold"='purple'),
                         breaks = c("90% Threshold", "2x Threshold", "3x Threshold", "4x Threshold", "Observed Temperature","Climatology"))+
-      scale_fill_manual(values=c("I Moderate"=alpha("goldenrod2",0.5),"II Strong"=alpha("orangered",0.5),
-                                 "III Severe"=alpha("firebrick4",0.5),"IV Extreme"=alpha('purple',0.5)))+
+      scale_fill_manual(values=c("I Moderate"=alpha("goldenrod2",1),"II Strong"=alpha("orangered",1),
+                                 "III Severe"=alpha("firebrick4",1),"IV Extreme"=alpha('purple',1)))+
       theme_classic()+labs(x="Time",y="Temperature (°C)")+
         geom_blank(aes(color="Climatology"))+
       geom_blank(aes(fill="Observed Temperature",value="black"))+
@@ -393,27 +393,27 @@ int_x <- (models$lowct_lowz$coefficients[1]-models$highct_highz$coefficients[1])
 
 
  C_plot<-ggplot()+
-      geom_line(data=simulated_line,aes(y=(time),x=temp,color=species),linewidth=1,inherit.aes=F,color="purple")+
+      geom_line(data=simulated_line,aes(y=(time),x=temp,color=species),linewidth=1,inherit.aes=F,color="dimgray")+
       theme_minimal()+
-      geom_point(data=simulated_point,aes(y=time,x=temp,color=species),size=3,shape=3,color="purple")+
+      geom_point(data=simulated_point,aes(y=time,x=temp,color=species),size=3,shape=3,color="darkgray")+
       labs(y="Time to death (min)",x="Temperature (°C)",color="Species")+scale_y_continuous(position='right')+
-      theme(axis.title.y = element_text(colour = "purple"),axis.text.y = element_text(colour = "purple"),
-            panel.grid.major = element_line(colour = "purple", linetype = "dashed",size=.3),
-            panel.grid.minor = element_line(colour="purple",linetype="dotted",size=.1)
+      theme(axis.title.y = element_text(colour = "darkgray"),axis.text.y = element_text(colour = "darkgray"),
+            panel.grid.major = element_line(colour = "darkgray", linetype = "dashed",size=.3),
+            panel.grid.minor = element_line(colour="darkgray",linetype="dotted",size=.1)
 )
     
     
 
     
     D<-ggplot()+
-      geom_line(data=simulated_line,aes(y=time,x=temp,color=species),linewidth=1,inherit.aes=F,color="darkorange")+
-      theme_minimal()+scale_y_log10()+
-      geom_point(data=simulated_point,aes(y=time,x=temp,color=species),size=3,shape=3,color="darkorange")+
+      geom_line(data=simulated_line,aes(y=time,x=temp,color=species),linewidth=1,inherit.aes=F,color="red")+
+      theme_classic()+scale_y_log10()+
+      geom_point(data=simulated_point,aes(y=time,x=temp,color=species),size=3,color="black")+
       labs(y="Log Time to death (min)",x="Temperature (°C)",color="Species")+
-      theme(axis.title.y = element_text(colour = "darkorange"),axis.text.y = element_text(colour = "darkorange"),
-            panel.grid.major = element_line(colour = "darkorange", linetype = "dashed",size=0.3),
-            panel.grid.minor = element_line(colour="darkorange",linetype="dotted",size=.1))
-            
+      theme(axis.title.y = element_text(colour = "black"),axis.text.y = element_text(colour = "black"),
+            panel.grid.major = element_line(colour = "black", linetype = "dashed",size=0.3),
+            panel.grid.minor = element_line(colour="black",linetype="dotted",size=.1))
+D
     
     aligned_plots<-align_plots(C_plot,D,align="hv",axis="tblr")
     TDT_plot<-ggdraw(aligned_plots[[1]]) + draw_plot(aligned_plots[[2]])
@@ -481,7 +481,7 @@ static2<-static2%>%rename(c("t_coma"="time","assay_temp"="temp"))
 ```
 
 ```{r,echo=F}
-ggarrange(B,TDT_plot,MHW_example,nrow=3,ncol=1,labels=c("A","B","C"))
+ggarrange(B,D,MHW_example,nrow=3,ncol=1,labels=c("A","B","C"))
       
 ggsave("result_figs/conceptual_figure.tiff",width=5,height=15,units="in",dpi=300)      
     
