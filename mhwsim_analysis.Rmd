@@ -555,15 +555,6 @@ species_heatmap_plot<-ggplot(category_prop_species,aes(x=hours_dur,y=magnitude,z
 species_heatmap_plot
 #ggsave(path = "result_figs",filename="species_heatmap.tif", device='tiff', dpi=300,width=8,height=4,units="in")
 
-#without categories
-plotnocat<-ggplot(category_prop_species,aes(x=hours_dur,y=magnitude,z=cum.mort,group=label))+geom_tile(aes(fill=cum.mort),linewidth=0.5)+scale_fill_viridis_c()+theme_classic()+geom_contour(color="black")+ geom_text_contour(aes(z = cum.mort),color="black",fontface="bold")+
-  #scale_color_brewer(palette="YlOrRd")+
-    scale_color_manual(values=c("cornsilk3","goldenrod2","orangered","firebrick4","purple"))+
-  labs(color="MHW Category", fill="Survival (%)")+xlab("Duration (hours)")+ 
-  facet_wrap(.~label)
-  
-
-
 species.legend<-get_legend(species_heatmap_plot)
 
 
