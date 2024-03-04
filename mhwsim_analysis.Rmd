@@ -19,7 +19,6 @@ Two exterior R files are called to define functions used in this analysis. They 
 knitr::opts_chunk$set(echo = TRUE)
 require(tidyverse)
 require(ggplot2)
-require(beepr)
 require(purrr)
 require(ggridges)
 require(parallel)
@@ -340,7 +339,7 @@ set.seed(123)
 example_TDT<-data.frame("species"=c("lowct_lowz","highct_highz"),"z"=c(4.5,5.25),"ctmax"=c(45,46))
 
 
-temp<-rep(seq(26,46,by=2))
+temp<-rep(seq(26,46,by=1))
 
 # Create an empty data frame to store the results
 sim_pred <- vector("list",length=2)
@@ -395,20 +394,54 @@ int_x <- (models$lowct_lowz$coefficients[1]-models$highct_highz$coefficients[1])
   (models$highct_highz$coefficients[2]-models$lowct_lowz$coefficients[2])      
     int_y <- models$highct_highz$coefficients[2]*int_x + models$highct_highz$coefficients[1]           
 
-
-
-ggplot()+geom_line(data=simulated_line,aes(x=temp,y=time,color=species))+scale_y_log10()+
-  geom_point(data=simulated_point,aes(x=temp,y=time,color=species))+theme_classic()+
+    
+ggplot()+
+  geom_line(data=simulated_line,aes(x=temp,y=time,color=species))+
+  scale_y_log10()+
+  geom_point(data=simulated_point,aes(x=temp,y=time,color=species))+
+  theme_classic()+
   ylab("Time to death (minutes)")+xlab("Assay Temperature (°C)")+
-  scale_color_discrete(name="Species Strategy",labels=c(expression(paste("Acute Tolerator (High ",CT[max],", High ",italic(z),")")),expression(paste("Chronic Tolerator (Low ",CT[max],", Low ",italic(z),")"))))+
+  scale_color_manual(name="Species Strategy",
+                       labels=c("Acute Tolerator","Chronic Tolerator"),
+                      values=c("royalblue","tomato3"))+
   geom_point(aes(x=int_x,y=10^int_y))+
   geom_segment(aes(x=25,xend=int_x,y=10^int_y,yend=10^int_y),color="black",linetype="dashed",inherit.aes=F)+
   geom_segment(aes(x=int_x,xend=int_x,y=0,yend=10^int_y),color="black",linetype="dashed",inherit.aes=F)+
-  annotate("text",x=30,y=5,label="16.9 minutes, 39.53 °C ",size=4)
+  annotate("text",x=30,y=5,label="16.9 minutes, 39.5 °C ",size=4)+scale_x_continuous(breaks=seq(26,46,by=4))+
+  theme(legend.text.align = 0)
+
 
 
 ggsave(path = "result_figs/supp",filename="twospecies_TDT.tif", device='tiff', dpi=300,width=6,height=4,units="in")
+```
 
+```{r}
+
+summary(lm(log10(simulated_point$time)~simulated_point$temp*simulated_point$species))
+
+
+tempi<-unique(simulated_point$temp)
+
+result.df<-data.frame("temp"=tempi,"p-value"=NA)
+
+for (i in 1:length(tempi)){
+  
+  tempii<-simulated_point%>%filter(temp==tempi[i])
+  
+  res<-summary(lm(log10(tempii$time)~tempii$species))
+  result.df[i,2]<-coef(res)[2,4]
+}
+result.df
+
+#Are time to deaths at each CTmax significantly different?
+acute<-temp.df%>%filter(species=="highct_highz",temp=="46")
+chronic<-temp.df%>%filter(species=="lowct_lowz",temp=="45")
+
+sp.comp<-bind_rows(acute,chronic)
+
+t.test(10^(sp.comp$time)~sp.comp$species)
+
+ggplot(sp.comp,aes(x=species,y=10^(time)))+geom_boxplot()
 
 ```
 

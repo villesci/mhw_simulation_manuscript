@@ -27,13 +27,10 @@ tolerance.landscape.np <- function(ta,time){
   
   # Step 3: Interpolating survival probabilities to make them comparable across treatments 
   time.interpol <- matrix(,1001,length(ta))
-  for (i in 1:length(ta)){	
-    #time <- c(0,sort(data$time[data$ta==ta[i]]))
-    time<-c(0,data$time[i])
-    #if (length(time)==1){time=c(0,0.0000000000000001)}
+  for(i in 1:length(ta)){	
+    time <- c(0,sort(data$time[data$ta==ta[i]]))
     p <- seq(0,100,length.out = length(time))
-    time.interpol[,i] <- approx(p,time,n = 1001)$y
-  }			
+    time.interpol[,i] <- approx(p,time,n = 1001)$y}			
   
   # Step 4: Overlap all survival curves into a single one by shifting each curve to mean x and y employing z
   # Step 5: Build expected survival curve with median survival time for each survival probability
@@ -46,71 +43,18 @@ tolerance.landscape.np <- function(ta,time){
   m <- surv.pred*matrix ((10^((ta.mn - rep(ta, each = 1000))/z)), nrow = 1000)
   out <-0
   for(i in 1:length(ta)){
-    time <- c(0,data$time[i])
-    p <- seq(0,100,length.out = length(time))
+    time <- c(0,data$time[data$ta==ta[i]]); p <- seq(0,100,length.out = length(time))
     out <- c(out,approx(seq(0,100,length.out = 1000),m[,i],xout=p[-1])$y)}
   data$time.pred <- out[-1]
   colnames(m) <- paste("time.at",ta,sep=".")
   m <- cbind(surv.prob=seq(1,0.001,-0.001),m)
   
-  
-  
+  for(i in 1:length(ta)){
+    time <- c(0,sort(data$time[data$ta==ta[i]])); p <- seq(100,0,length.out = length(time))
+    time <- c(0,sort(data$time.pred[data$ta==ta[i]]))}
   rsq <- round(summary(lm(log10(data$time) ~ log10(data$time.pred)))$r.square,3)
   list(ctmax = as.numeric(ctmax), z = as.numeric(z), ta.mn = ta.mn,  S = data.frame(surv=seq(0.999,0,-0.001),time=surv.pred),
-       time.obs.pred=cbind(data$time,data$time.pred), rsq = rsq)}					
-
-
-
-	tolerance.landscape.np.tc <- function(ta,time,tc){
-	  
-	  data <- data.frame(ta,time)
-	  data <- data[order(data$ta,data$time),]
-	  
-	  # Step 1: Calculate CTmax and z from TDT curve
-	  ta <- as.numeric(levels(as.factor(data$ta)))			
-	  model <- lm(log10(data$time) ~ data$ta); summary(model)
-	  ctmax <- -coef(model)[1]/coef(model)[2]
-	  z <- -1/coef(model)[2]
-	  
-	  # Step 2: Calculate average log10 time and Ta (mean x and y for interpolation purposes)
-	  time.mn <- mean(log10(data$time))
-	  ta.mn <- mean(data$ta)
-	  
-	  # Step 3: Interpolating survival probabilities to make them comparable across treatments 
-	  time.interpol <- matrix(,1001,length(ta))
-	  for (i in 1:length(ta)){	
-	    #time <- c(0,sort(data$time[data$ta==ta[i]]))
-	    time<-c(0,data$time[i])
-	    #if (length(time)==1){time=c(0,0.0000000000000001)}
-	    p <- seq(0,100,length.out = length(time))
-	    time.interpol[,i] <- approx(p,time,n = 1001)$y
-	  }			
-	  
-	  # Step 4: Overlap all survival curves into a single one by shifting each curve to mean x and y employing z
-	  # Step 5: Build expected survival curve with median survival time for each survival probability
-	  shift <- (10^((ta - ta.mn)/z))
-	  shift[1]<-1/(30*24*60)
-	  time.interpol.shift <- t(t(time.interpol)*shift)[-1,]
-	  surv.pred <- 10^apply(log10(time.interpol.shift),1,median) 	
-	  
-	  # Step 6: Expand predicted survival curves to measured Ta (matrix m arranged from lower to higher ta)
-	  # Step 7: Obtain predicted values comparable to each empirical measurement
-	  m <- surv.pred*matrix ((10^((ta.mn - rep(ta, each = 1000))/z)), nrow = 1000)
-	  out <-0
-	  for(i in 1:length(ta)){
-	    time <- c(0,data$time[i])
-	    p <- seq(0,100,length.out = length(time))
-	    out <- c(out,approx(seq(0,100,length.out = 1000),m[,i],xout=p[-1])$y)}
-	  data$time.pred <- out[-1]
-	  colnames(m) <- paste("time.at",ta,sep=".")
-	  m <- cbind(surv.prob=seq(1,0.001,-0.001),m)
-	  
-	  
-	  
-	  rsq <- round(summary(lm(log10(data$time) ~ log10(data$time.pred)))$r.square,3)
-	  list(ctmax = as.numeric(ctmax), z = as.numeric(z), ta.mn = ta.mn,  S = data.frame(surv=seq(0.999,0,-0.001),time=surv.pred),
-	       time.obs.pred=cbind(data$time,data$time.pred), rsq = rsq)}		
-	
+       time.obs.pred=cbind(data$time,data$time.pred), rsq = rsq)}			
 	
 	
 
@@ -122,12 +66,13 @@ tolerance.landscape.np <- function(ta,time){
 	  surv <- tolerance.landscape$S[, 2]
 	  ta.mn <- tolerance.landscape$ta.mn
 	  z <- tolerance.landscape$z
+	  tc<-tolerance.landscape$tc
 	  shift <- 10^((ta.mn - ta) / z)
 	  time.rel <- 0
 	  alive <- 100
 	  
 	  for (i in 1:length(ta)) {
-	    if (ta[i] <= 26) {
+	    if (ta[i] <= tc) {
 	      # Set survival to 100% for temperatures lower than 26 degrees
 	      alive <- c(alive, 100)
 	      time.rel <- c(time.rel, 1)
@@ -158,13 +103,14 @@ tolerance.landscape.np <- function(ta,time){
 ###########################
 
 
-	rezende_min<-function(tempseries,TDT_object){
-	  #first, put your temp time series into minute durations. Spline. 
+	rezende_min<-function(tempseries,TDT_object,tc){
+	  #first, make sure your temp time series are minute durations.  
 	  time.min <- tempseries$time	
 	  ta.min <- tempseries$temp
 	  
 	  #next, create a tolerance landscape
 	  tl_object<-tolerance.landscape.np(TDT_object$temp,TDT_object$time)
+	  tl_object$tc<-tc
 	  
 	  #repeat day number 1440 times (minutes in a day) 
 	  day <- rep(1:(length(ta.min)/1440),each=1440)
@@ -203,4 +149,5 @@ tolerance.landscape.np <- function(ta,time){
 	  return(mort.df)
 	  beep()
 	}
+	
 	
