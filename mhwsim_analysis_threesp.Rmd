@@ -328,11 +328,12 @@ merged_temp_tri_alphas[[xx]]<-merged_temp_tri
 }
 )
 
-saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas.RDs")
+#saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas.RDs")
 ```
 
 ```{r,echo=F}
 merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas.RDs") #reading this file in can take a while. Not hosted on github. 
+
 
 
 
