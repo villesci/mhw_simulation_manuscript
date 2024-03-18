@@ -23,11 +23,21 @@ require(simglm)
 require(zoo)
 require(plotly)
 require(ggpubr)
+library(kableExtra)
 source("hour_fxns_heatwaveR.R")
 source("Thermal_landscape_functions.R")
 
 options(scipen=999)
 set.seed(123)
+
+#official MHW color scale + cornsilk (this paper)
+MHW_colours <- c(
+  'No MHW'="cornsilk3",
+  "I Moderate" = "#ffc866",
+  "II Strong" = "#ff6900",
+  "III Severe" = "#9e0000",
+  "IV Extreme" = "#2d0000"
+)
 
 #function from user beckmw https://www.r-bloggers.com/2017/04/predicting-tides-in-r/
     waves <- function(date_start,date_end, alpha = 0, beta = 1, freq = 24, phi = 0){
@@ -52,6 +62,8 @@ set.seed(123)
       df<-data.frame("vals"=y,"datetime"=x)
       return(df)
     }
+   ######fix me 
+    
     
     #this only spits out the matrix as a result - do not use for anything other than landscapes
      tolerance.landscape.monly <- function(ta,time){
@@ -69,12 +81,11 @@ set.seed(123)
       time.mn <- mean(log10(data$time))
       ta.mn <- mean(data$ta)
       
-      time.interpol <- matrix(,101,length(ta))
-      for(i in 1:length(ta)){	
-        time <- c(0,sort(data$time[data$ta==ta[i]]))
-        if (length(time)==1){time=(c(0,0.000000001))}
-        p <- seq(0,100,length.out = length(time))
-        time.interpol[,i] <- approx(p,time,n = 101)$y}		
+      time.interpol <- matrix(,1001,length(ta))
+ for(i in 1:length(ta)){	
+    time <- c(0,sort(data$time[data$ta==ta[i]]))
+    p <- seq(0,100,length.out = length(time))
+    time.interpol[,i] <- approx(p,time,n = 1001)$y}				
       
       
       # Step 4: Overlap all survival curves into a single one by shifting each curve to mean x and y employing z
@@ -85,18 +96,14 @@ set.seed(123)
       
       # Step 6: Expand predicted survival curves to measured Ta (matrix m arranged from lower to higher ta)
       # Step 7: Obtain predicted values comparable to each empirical measurement
-      m <- surv.pred*matrix ((10^((ta.mn - rep(ta, each = 100))/z)), nrow = 100)
-      out <-0
-      for(i in 1:length(ta)){
-        time <- c(0,data$time[data$ta==ta[i]])
-        if (length(time)==1){time=(c(0,0.000000001))}
-        p <- seq(0,100,length.out = length(time))
-        out <- c(out,approx(seq(0,100,length.out = 100),m[,i],xout=p[-1])$y)#cut length out to 100
-        if (length(out)==1){out=(c(0,0.000000001))}
-      }
-      data$time.pred <- out[-1]
-      colnames(m) <- ta
-      m <- cbind(surv.prob=seq(1,0.01,-0.01),m)}
+ m <- surv.pred*matrix ((10^((ta.mn - rep(ta, each = 1000))/z)), nrow = 1000)
+  out <-0
+  for(i in 1:length(ta)){
+    time <- c(0,data$time[data$ta==ta[i]]); p <- seq(0,100,length.out = length(time))
+    out <- c(out,approx(seq(0,100,length.out = 1000),m[,i],xout=p[-1])$y)}
+  data$time.pred <- out[-1]
+  colnames(m) <- paste("time.at",ta,sep=".")
+  m <- cbind(surv.prob=seq(1,0.001,-0.001),m)}
 
     MHW_tri_no_save<-function(magnitude,duration,slope_inc){
       
@@ -287,23 +294,23 @@ f_dowle3 = function(DT) {
       geom_line(aes(x=time,y=thresh_4x,color="4x Threshold"),linetype=2,linewidth=1)+
       geom_line(aes(x=time,y=temp,color="Observed Temperature"))+
       scale_color_manual(values=c("Climatology"="darkgray","Observed Temperature"="black",
-                                  "90% Threshold"="goldenrod2","2x Threshold"="orangered","3x Threshold"="firebrick4",
-                                  "4x Threshold"='purple'),
+                                  "90% Threshold"=MHW_colours[2][[1]],"2x Threshold"=MHW_colours[3][[1]],"3x Threshold"=MHW_colours[4][[1]],
+                                  "4x Threshold"=MHW_colours[5][[1]]),
                         breaks = c("90% Threshold", "2x Threshold", "3x Threshold", "4x Threshold", "Observed Temperature","Climatology"))+
-      scale_fill_manual(values=c("I Moderate"=alpha("goldenrod2",1),"II Strong"=alpha("orangered",1),
-                                 "III Severe"=alpha("firebrick4",1),"IV Extreme"=alpha('purple',1)))+
-      theme_classic()+labs(x="Time",y="Temperature (°C)")+
+      scale_fill_manual(values=c("I Moderate"=alpha(MHW_colours[2][[1]],1),"II Strong"=alpha(MHW_colours[3][[1]],1),
+                                 "III Severe"=alpha(MHW_colours[4][[1]],1),"IV Extreme"=alpha(MHW_colours[5][[1]],1)))+
+      theme_classic()+labs(x="Time",y="Temp. (°C)",fill="MHW Category",color="MHW Threshold")+
         geom_blank(aes(color="Climatology"))+
       geom_blank(aes(fill="Observed Temperature",value="black"))+
         #guides(fill="none")+
-        theme(legend.title=element_blank(),axis.title.x=element_blank())+
+        theme(axis.title.x=element_blank())+
       geom_segment(aes(x=maxtemptime,xend=maxtemptime,y=26,yend=max(temp)),linetype=3)+
       geom_segment(aes(x=maxtemptime-lubridate::days(5),xend=maxtemptime+lubridate::days(5),y=26,yend=26),linetype=3)+
       scale_y_continuous(limits=c(25.25,31))+
       annotate("text",x=maxtemptime,y=25.4,label="MHW Duration = 10 days",size=4,fontface="italic")+
       annotate("text",x=end_date_mhw+lubridate::days(5),y=30,label="Magnitude =\n 5°C ",size=4,fontface="italic")+
       geom_segment(aes(x=maxtemptime,xend=maxtemptime-lubridate::hours(2),y=25.6,yend=25.95),arrow=arrow(length=unit(0.2,"cm")))+
-      geom_segment(aes(x=end_date_mhw,xend=maxtemptime+lubridate::minutes(30),y=30,yend=29.2),arrow=arrow(length=unit(0.2,"cm")))
+      geom_segment(aes(x=end_date_mhw,xend=maxtemptime+lubridate::minutes(30),y=30,yend=28.5),arrow=arrow(length=unit(0.2,"cm")))
     
     
       B
@@ -321,11 +328,11 @@ Here, we demonstrate the curve for our acute tolerator (high CTmax, high z)
 set.seed(123)
 
 
-#only the first hypothetical species is used
-example_TDT<-data.frame("species"=c("highct_highz"),"z"=c(5.25),"ctmax"=c(46))
+#only the first hypothetical species is used - highct_highz
+example_TDT<-data.frame("species"=c("highct_highz"),"z"=c(4.152792),"ctmax"=c(48))
 
 
-temp<-rep(seq(26,46,by=2))
+temp<-rep(seq(26,48,by=2))
 
 # Create an empty data frame to store the results
 sim_pred <- vector("list",length=2)
@@ -380,45 +387,18 @@ int_x <- (models$lowct_lowz$coefficients[1]-models$highct_highz$coefficients[1])
   (models$highct_highz$coefficients[2]-models$lowct_lowz$coefficients[2])      
     int_y <- models$highct_highz$coefficients[2]*int_x + models$highct_highz$coefficients[1]           
 
-
-
-#ggplot()+geom_line(data=simulated_line,aes(x=temp,y=time,color=species))+scale_y_log10()+
-#  geom_point(data=simulated_point,aes(x=temp,y=time,color=species))+theme_classic()+
-#  ylab("Time to death (minutes)")+xlab("Assay Temperature (°C)")+
-#  scale_color_discrete(name="Species Strategy",labels=c(expression(paste("High ",CT[max],", High ",italic(z))),expression(paste("Low #",CT[max],", Low ",italic(z)))))+
-#  geom_point(aes(x=int_x,y=10^int_y))+
-#  geom_segment(aes(x=25,xend=int_x,y=10^int_y,yend=10^int_y),color="black",linetype="dashed",inherit.aes=F)+
-#  geom_segment(aes(x=int_x,xend=int_x,y=0,yend=10^int_y),color="black",linetype="dashed",inherit.aes=F)+
-#  annotate("text",x=30,y=5,label="16.9 minutes, 39.53 °C ",size=4)
-
-
- C_plot<-ggplot()+
-      geom_line(data=simulated_line,aes(y=(time),x=temp,color=species),linewidth=1,inherit.aes=F,color="dimgray")+
-      theme_minimal()+
-      geom_point(data=simulated_point,aes(y=time,x=temp,color=species),size=3,shape=3,color="darkgray")+
-      labs(y="Time to death (min)",x="Temperature (°C)",color="Species")+scale_y_continuous(position='right')+
-      theme(axis.title.y = element_text(colour = "darkgray"),axis.text.y = element_text(colour = "darkgray"),
-            panel.grid.major = element_line(colour = "darkgray", linetype = "dashed",size=.3),
-            panel.grid.minor = element_line(colour="darkgray",linetype="dotted",size=.1)
-)
-    
-    
-
-    
     D<-ggplot()+
-      geom_line(data=simulated_line,aes(y=time,x=temp,color=species),linewidth=1,inherit.aes=F,color="red")+
+      geom_line(data=simulated_line,aes(y=time,x=temp,color=species),linewidth=1,inherit.aes=F,color="black")+
       theme_classic()+scale_y_log10()+
-      geom_point(data=simulated_point,aes(y=time,x=temp,color=species),size=3,color="black")+
-      labs(y="Log Time to death (min)",x="Temperature (°C)",color="Species")+
+      geom_point(data=simulated_point,aes(y=time,x=temp,color=species),size=3,alpha=0.3)+
+      scale_color_brewer(palette="Set1")+
+      labs(y="Log Time to death (min)",x="Temp. (°C)",color="Species")+
       theme(axis.title.y = element_text(colour = "black"),axis.text.y = element_text(colour = "black"),
             panel.grid.major = element_line(colour = "black", linetype = "dashed",size=0.3),
-            panel.grid.minor = element_line(colour="black",linetype="dotted",size=.1))
-D
-    
-    aligned_plots<-align_plots(C_plot,D,align="hv",axis="tblr")
-    TDT_plot<-ggdraw(aligned_plots[[1]]) + draw_plot(aligned_plots[[2]])
-    
-TDT_plot
+            panel.grid.minor = element_line(colour="black",linetype="dotted",size=.1))+
+theme(legend.position="none")
+    D
+
 
 
 ```
@@ -441,7 +421,7 @@ static2<-static2%>%rename(c("t_coma"="time","assay_temp"="temp"))
     
     example_mhw<-joined_df_short
     
-    tmpi<-rezende_min(example_mhw,temp.df)
+    tmpi<-rezende_min(example_mhw,temp.df,tc=26)
     
     # Define the limits for 'mort' and 'temp'
     mort_limits <- c(0, 100)
@@ -452,12 +432,12 @@ static2<-static2%>%rename(c("t_coma"="time","assay_temp"="temp"))
     joined_df_short$temp_trans <- (joined_df_short$temp - min(temp_limits)) * trans + min(mort_limits)
     
     exmple_mort<-tmpi%>% filter(type=="cum.mort")
-    min(exmple_mort$mort)
+    min_mort<-round(min(exmple_mort$mort),digits=1)
     
     MHW_example<-ggplot() +
       geom_line(data = exmple_mort, aes(x=hours, y=mort, color=type),color="red",linewidth=2) +
       geom_line(data = joined_df_short, aes(x=time, y=temp_trans),linewidth=2,color="blue") +
-      scale_y_continuous(name="Survivorship Proportion",limits=mort_limits, sec.axis = sec_axis(~(. - min(mort_limits)) / trans + min(temp_limits), name = "Temperature"))+
+      scale_y_continuous(name="Survivorship Proportion",limits=mort_limits, sec.axis = sec_axis(~(. - min(mort_limits)) / trans + min(temp_limits), name = "Temp. (°C)"))+
       guides(color="none")+theme_classic()+
         theme(axis.line.y.right = element_line(color = "blue"), 
               axis.ticks.y.right = element_line(color = "blue"),
@@ -471,7 +451,7 @@ static2<-static2%>%rename(c("t_coma"="time","assay_temp"="temp"))
         geom_vline(aes(xintercept=as.POSIXct(maxtemptime)-lubridate::days(5)),color="black",linetype="dotted")+
         geom_vline(aes(xintercept=as.POSIXct(maxtemptime)+lubridate::days(5)),color="black",linetype="dotted")+
         geom_point(aes(x=max(joined_df_short$time),y=min(exmple_mort$mort)),size=3,color="black",fill="yellow",shape=21,stroke=1)+
-        annotate("text",x=as.POSIXct("2022-08-27"),y=75,label="Cumulative \n Survivorship = 91.2% ",size=4,fontface="italic")+
+        annotate("text",x=as.POSIXct("2022-08-27"),y=75,label=paste0("Cumulative \n Survivorship = ", min_mort,"% "),size=4,fontface="italic")+
         geom_segment(aes(x=as.POSIXct("2022-08-27"),xend=max(joined_df_short$time)-lubridate::hours(12),y=80,yend=91),arrow=arrow(length=unit(0.2,"cm")))
     
     MHW_example
@@ -481,8 +461,10 @@ static2<-static2%>%rename(c("t_coma"="time","assay_temp"="temp"))
 ```
 
 ```{r,echo=F}
-ggarrange(B,D,MHW_example,nrow=3,ncol=1,labels=c("A","B","C"))
+ggarrange(B,D,MHW_example,nrow=1,ncol=3,labels=c("A","B","C"))
       
-ggsave("result_figs/conceptual_figure.tiff",width=5,height=15,units="in",dpi=300)      
+ggsave("result_figs/conceptual_figure.pdf",width=15,height=5,units="in",dpi=300,device='pdf')   
+ggsave("result_figs/conceptual_figure.tif",width=15,height=5,units="in",dpi=300,device='tiff')   
+
     
 ```

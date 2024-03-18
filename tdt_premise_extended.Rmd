@@ -1,0 +1,485 @@
+---
+title: "tdt_premise_extended_analysis"
+author: "Andrew Villeneuve"
+date: "2024-03-18"
+output: html_document
+---
+
+# Readme
+
+This script was written to construct the extended heatmap in the supplementary material of Villeneuve and White 2024 MHW simulation paper. This markdown is meant to be a stand-alone document from the main analysis of the paper (mhwsim_analysis_threesp.Rmd) which can be knitted. Note, however, that a bulk of the analysis is silenced here due to the extreme computational requirements of analyzing more than double the MHW profiles from the original, main text analysis. We ran this code on the University of New Hampshire's supercomputing cluster PREMISE, which took around six hours to complete. We highly suggest running the code found in the main RMD document unless the intention is to completly replicate our results, in which case the first code chunk should be unsilenced. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(tidyverse)
+require(lubridate)
+require(tibble)
+require(ggplot2)
+require(purrr)
+require(ggridges)
+require(parallel)
+require(foreach)
+require(data.table)
+require(dtplyr)
+require(zoo)
+require(cowplot)
+library(RColorBrewer)
+require(doParallel)
+require(rlang)
+require(reshape2)
+require(heatwaveR)
+require(scico)
+require(ggpubr)
+require(SpatialTools)
+
+
+options(scipen=999)
+
+source("Thermal_landscape_functions.R")
+source("hour_fxns_heatwaveR.R")
+```
+
+```{r,eval=F}
+##################################################
+magnitude_min<-0.01 #0.01 degree minimum magnitude. Analysis does not accept 0 value
+magnitude_max<-20.01 #8 degree duration max. This is in agreement with observed values above climatology across multiple major MHW events
+duration_min<-60*1 #one hour MHW min  Here, we differ from other definitions (Hobday et al. 2016) that set minimum values of 5 days for a MHW event. For intertidal organisms, a few hours of extreme heat during low tide during an atmospheric heatwave may cause mortality and should be considered from an ecophysiological perspective. 
+duration_max<-24*30*60+60*1 # 30 day MHW max - MHWs can commonly last multiple days, weeks, or months. However, for the sake of this initial analysis, we reduce that to three day for speed of calculation.Note that this is technically 30 days plus one hour, to keep intervals between durations the same. 
+
+magnitude_inc<-0.5 # magnitudes given in 0.5 degree increments 
+duration_inc<-24*60 #durations given in 24 hour increments (MUST be in minutes)
+slope_inc<-NA
+
+MHW_tri<-function(magnitude_min,magnitude_max,duration_min,duration_max,magnitude_inc,duration_inc,slope_inc){
+  
+  #sequence of magnitudes
+  mag_seq<-seq(magnitude_min,magnitude_max,by = magnitude_inc)
+  
+  #sequence of duration (in minutes)
+  dur_seq<-seq(duration_min,duration_max,by = duration_inc)
+  
+  if (is.na(slope_inc)){
+    
+    #create an expanded dataframe of all possible parameter combinations. 
+    
+    expanded<-data.frame(expand.grid('mag_seq'=mag_seq,'dur_seq'=dur_seq))
+  } else{
+    slope_seq<-seq(0.0001,6/360,by=slope_inc)
+    expanded<-data.frame(expand.grid('mag_seq'=mag_seq,'dur_seq'=dur_seq,'slope_seq'=slope_seq)) # if we want to control slope
+  }
+  
+  
+  
+  
+  
+  #create empty matrix to store results
+  mag_dur_tri <- vector("list", length(mag_seq))
+  
+  #single loop to create triangles for each row in the expanded dataframe, encapsulating all possible parameters  
+  for (i in 1:nrow(expanded)){
+    magnitude<-as.numeric(expanded[i,1])
+    hw_length<-expanded[i,2] #duration
+    #rising_slope<-expanded[i,3] if we vary slope
+    rising_slope<-magnitude/(hw_length/2)
+    #create df of dates and numerical sequence
+    
+    rising_length<-magnitude/rising_slope
+    falling_length<-hw_length-rising_length
+    if (is.na(rising_length) || is.na(hw_length)) {
+      print("Debug: Missing value in rising_length or hw_length")
+      #add ifelse to remove unlikely initial slope values
+    } else if(rising_length>=hw_length){#if rising portion is longer than entire mhw duration
+      z<-data.frame("timestep"=NA,"value"=NA,"magnitude"=magnitude,"duration"=hw_length,"rising_slope"=rising_slope,"falling_slope"=NA,"area"=NA,"mean_i"=NA,"hdd"=NA)
+    } else {
+      falling_slope<-(-rising_slope)
+      #dataframes of rising falling points
+      rising_seq<-data.frame("timestep"=seq(1,floor(max(rising_length)),by=1))
+      falling_seq<-data.frame("timestep"=seq(from=floor(max(rising_length))+1,to=hw_length,by = 1))
+      
+      rising_seq$value<-rising_seq$timestep*rising_slope
+      falling_seq$value<-(falling_seq$timestep*falling_slope)+(max(rising_length)*magnitude/nrow(falling_seq))+magnitude
+      
+      #apply values
+      
+      z<-rbind(rising_seq,falling_seq)
+      z$reps<-i
+      z$magnitude<-magnitude
+      z$duration<-hw_length
+      z$rising_slope<-rising_slope
+      z$falling_slope<-falling_slope
+      z$area<- magnitude*hw_length/2
+      z$mean_i<-mean(z$value)
+      #heating degree days
+      #first, create a column of day 
+      if(hw_length<1440){
+        z$unique_day<-hw_length
+      }else{
+        z$unique_day<-(z$timestep-1)%/%1440+1
+      }
+      
+      hdd_tib<-z%>%group_by(unique_day)%>%summarize(mean_t=mean(value))%>%summarize(output=sum(mean_t))
+      z$hdd<-hdd_tib$output
+    }
+    
+    
+    mag_dur_tri[[i]] <- z
+  }
+  
+  boundoutput_tri<-bind_rows(mag_dur_tri,.id="reps") #from matrix to data.frame
+  boundoutput_tri$reps<-as.numeric(boundoutput_tri$reps)
+  saveRDS(boundoutput_tri,"data/boundoutput_tri_ext.RDs") #saves file to onedrive due to space restrictions in github. Can be silenced. 
+  
+
+}
+
+system.time(MHW_tri(magnitude_min,magnitude_max,duration_min,duration_max,magnitude_inc,duration_inc,slope_inc))
+
+#tri_output<-readRDS("data/boundoutput_tri_ext.RDs")
+tri_data<-tri_output
+tri_data$duration<-tri_data$duration/60 #convert to hours for plotting
+
+tri_data$label<-paste(tri_data$magnitude, "°C", sep = "")
+tri_data<-as.data.frame(tri_data)
+waves <- function(date_start,date_end, alpha = 0, beta = 1, freq = 24, phi = 0){
+  
+  start <- as.POSIXct(date_start)
+  end<-as.POSIXct(date_end)
+  x <- seq(start, end, by = 60 * 1)
+  
+  
+  # timestep per hour
+  time_step <- 60 / unique(diff(x))
+  # set phi as difference in hours from start of time_in
+  phi <- min(x) + phi * 3600
+  phi<- as.numeric(difftime(phi, min(x)))
+  phi <- phi / time_step
+  # get input values to cos func
+  in_vals <- seq(0, length(x), length = length(x))
+  in_vals <- in_vals / time_step
+  in_vals <- 2 * pi * in_vals * 1 / freq
+  # wave
+  y <- alpha + beta * sin((in_vals + phi)-(pi*.75))
+  df<-data.frame("vals"=y,"datetime"=x)
+  return(df)
+}
+
+year_out<-waves('2022-01-01','2022-12-31',alpha=12,beta=14,freq=365*24)
+
+#list of range parameters
+alpha_list<-c(12.75)
+merged_temp_tri_alphas<-vector("list",length=length(alpha_list))
+
+system.time(
+  for (xx in 1:length(alpha_list)){
+    year_thresh<-waves('2022-01-01','2022-12-31',alpha=alpha_list[xx],beta=14,freq=365*24)
+    
+    
+    clim<-data.frame("hoy"=lubridate::hour(year_out$datetime) + (lubridate::yday(year_out$datetime) - 1) * 24,
+                     "doy"=lubridate::yday(year_out$datetime),
+                     "t"=year_out$datetime,
+                     "temp"=year_out$vals,#climatology
+                     "seas"=year_out$vals,
+                     "thresh"=year_thresh$vals,
+                     "thresh_2x"=(year_thresh$vals-year_out$vals)+year_thresh$vals,
+                     "thresh_3x"=(((year_thresh$vals-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals,
+                     "thresh_4x"=(((((year_thresh$vals-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals)
+    
+    
+    clim_2022<-clim%>%dplyr::filter(t>=as.POSIXct('2022-07-22')&t<as.POSIXct('2022-09-12'))
+    out_res<-clim_2022%>%dplyr::rename("datetime"=t,"vals"=temp)
+    merged_temp_tri<-vector("list",length(unique(tri_data$reps)))
+    maxtemptime<-out_res%>%dplyr::filter(datetime>as.POSIXct('2022-01-01 00:00:00'))%>%
+      dplyr::filter(vals==max(vals))%>%dplyr::select(datetime)
+    maxtemptime<-as.POSIXct(maxtemptime[,1])
+    reps_list<-unique(tri_data$reps)
+    length(reps_list)
+    
+    #user 2238 system 160 elapsed 3439  - long, but better than an unoptimized left_join at 14000 seconds
+    #time 2, takes 10684s with an additional 22 simulations
+    syst<-system.time(
+      for (i in 1:length(reps_list)){
+        tryCatch({
+        #setup
+        rep_i<-tri_data%>%dplyr::filter(reps==i) # filter for each MHW
+        start_date_rep<-maxtemptime-floor(max(rep_i$duration/2))*60 #find halfway point and subtract from maximum annual timestamp to give start time
+        end_date_rep<-start_date_rep+ceiling(max(rep_i$duration))*60
+        rep_i$datetime<-seq(from=as.POSIXct(start_date_rep),length.out=ceiling(max(rep_i$timestep)),by="min")
+        
+        #much faster method of left_join and na.replace
+        joined_df<-as.data.table(rep_i)[as.data.table(out_res),on='datetime']
+        #system.time(f_dowle3(joined_df)) # another solution
+        
+        joined_df<-as.data.frame(joined_df)
+        joined_df$value<-ifelse(is.na(joined_df$value),0,joined_df$value)
+        joined_df$combined_temperature <- joined_df$vals + joined_df$value
+        joined_df_short<-joined_df%>%dplyr::filter(datetime>=as.POSIXct('2022-07-22 00:00:00')&datetime<as.POSIXct('2022-09-12 00:00:00'))
+        joined_df_short<-joined_df_short%>%rename("time"=datetime,"temp"=combined_temperature)
+        
+        #now, we categorize each MHW according to the Hobday definition. Note that we have altered code to 1) allow for timeseries in hours (and thus heat wave events classified in hours) and 2) we have removed minimum MHW length (previosuly five days)
+        repi_selection<-rep_i%>%dplyr::select(c(value,datetime))%>%dplyr::rename("t"=datetime)%>%dplyr::filter(t>='2022-07-22 00:00:00'&t<'2022-09-12 00:00:00')
+        
+        #0.11
+        result_df <- clim_2022 %>%
+          left_join(repi_selection, by = "t") %>%
+          mutate(sum_temp_value = coalesce(temp + value, temp))%>%dplyr::select(-c(temp,value))%>%dplyr::rename("temp"=sum_temp_value)
+        
+        
+        events<-detect_event_hour(result_df,date_start='2022-07-22',date_end='2022-09-12')
+        event_categories<-heatwaveR::category(events,S=F,name="simulation")
+        
+        #because the thresholds are not smoothed function, we occasionally get 
+        if (nrow(event_categories)>1){
+          event_categories<-event_categories%>%dplyr::slice(which.max(duration))
+        }
+        
+        joined_df_short$reps<-reps_list[i]
+        joined_df_short$duration_hob<-event_categories$duration
+        joined_df_short$peak_date<-event_categories$peak_date
+        joined_df_short$category<-event_categories$category
+        joined_df_short$imax_hob<-event_categories$i_max
+        joined_df_short$p_moderate<-event_categories$p_moderate
+        joined_df_short$p_strong<-event_categories$p_strong
+        joined_df_short$p_severe<-event_categories$p_severe
+        joined_df_short$p_extreme<-event_categories$p_extreme
+        
+
+        
+        merged_temp_tri[[i]]<-joined_df_short
+        rm(joined_df_short)
+        })
+              }
+      
+    )
+    #saveRDS(merged_temp_tri,paste0("data/merged_temp_tri_",xx,".RDs"))
+    merged_temp_tri<-purrr::compact(merged_temp_tri)
+    
+    merged_temp_tri_alphas[[xx]]<-merged_temp_tri
+  }
+)
+
+#saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas_ext.RDs")
+#merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas_ext.RDs")
+
+try<-merged_temp_tri_alphas[[1]][[1]]
+
+#################################################
+set.seed(123)
+
+#Let's create three species: Two of which have intersecting TDT at 30C and 15 days. The third will intersect the high CT species at 30C at 1 day. We will set CTmax
+
+#first, find potential values of CTmax to work with that intsersect at 15 days at 30C
+temp.seq<-seq(35,50,by=1)
+z_list<-vector("list",length=length(temp.seq))
+
+for (i in 1:length(temp.seq)){
+  slope<-(log10(15*60*24-1)/(30-temp.seq[i]))
+  z_list[[i]]<-(-1/slope)
+}
+
+z_bound<-unlist(z_list)
+sim_vals<-data.frame("ctmax"=temp.seq,"z"=z_bound)
+
+#we select 48C and 44C to start off
+highct_highz<-sim_vals[14,]
+highct_highz$species<-"highct_highz"
+lowct_midz<-sim_vals[10,]
+lowct_midz$species<-"lowct_midz"
+
+#thus far, we have selected tdt curves that intersect in thè middle of our parameter field (15 days, 4C above)
+#we now are interestd in a species that still has a lower CTmax, but will have a lower z such that it intersects the highCTmax Highz species quickly at 12 hours.
+
+equaltdt <- function(CTmax1, CTmax2, z1, z2, timetodeath) {
+  if (is.na(CTmax2)) {
+    CTmax2 <- CTmax1 - (log10(timetodeath) * (z1 - z2))
+    tempatdeath <- CTmax2 - z2 * log10(timetodeath)
+    return(list(CTmax2 = CTmax2, z2 = z2, temp_at_equal_TDT = tempatdeath))
+  } else if (is.na(z2)) {
+    z2 <- z1 - ((CTmax1 - CTmax2) / log10(timetodeath))
+    tempatdeath <- CTmax2 - z2 * log10(timetodeath)
+    return(list(z2 = z2, temp_at_equal_TDT = tempatdeath))
+  } else if (is.na(timetodeath)) {
+    timetodeath<-10^((CTmax1-CTmax2)/(z1-z2))
+    tempatdeath <- CTmax2 - z2 * log10(timetodeath)
+    
+    return(list(timetodeath=timetodeath,tempatdeath=tempatdeath))
+  }
+}
+
+#acute-chronic
+equ_res1a<-equaltdt(CTmax1=highct_highz$ctmax,CTmax2=lowct_midz$ctmax,z1=highct_highz$z,z2=NA,timetodeath=12*60)
+
+lowct_lowz<-data.frame("ctmax"=44,"z"=equ_res1a$z2,"species"="lowct_lowz")
+equ_res1b<-equaltdt(CTmax1=lowct_midz$ctmax,CTmax2=highct_highz$ctmax,z1=lowct_midz$z,z2=highct_highz$z,timetodeath=NA)
+
+
+#acute-mixed
+equ_res2<-equaltdt(CTmax1=lowct_lowz$ctmax,CTmax2=lowct_midz$ctmax,z1=lowct_lowz$z,z2=lowct_midz$z,timetodeath=NA)
+#chronic-mixed
+equ_res3<-equaltdt(CTmax1=highct_highz$ctmax,CTmax2=lowct_lowz$ctmax,z1=highct_highz$z,z2=lowct_lowz$z,timetodeath=NA)
+
+
+#set ctmax and z parameters
+example_TDT<-bind_rows(highct_highz,lowct_midz,lowct_lowz)
+
+
+temp<-rep(seq(26,46,by=2))
+
+# Create an empty data frame to store the results
+sim_pred <- vector("list",length=nrow(example_TDT))
+error<-10^(-1)
+
+# Loop over the species
+for(m in 1:nrow(example_TDT)){
+  # Model of TDT curve
+  time <- 10^((example_TDT$ctmax[m] - temp) / example_TDT$z[m])
+  
+  fit <- lm(log10(time) ~ temp)
+  
+  
+  
+  sim_results <- data.frame(species = rep(example_TDT$species[m], length(time)),
+                            temp = temp,
+                            time = time,
+                            geom = "line")
+  simulated_data <- data.frame()
+  
+  for (j in seq_along(temp)) {
+    # Generate 10 replicates for each temperature with normal distribution
+    replicates <- data.frame(
+      temp = rep(temp[j], times = 10),
+      time = 10^(rnorm(10, mean(predict(fit, newdata = data.frame(temp = temp[j]))), sqrt(error)))
+    )
+    # Add to the simulated_data
+    replicates$species <- rep(example_TDT$species[m], nrow(replicates))
+    replicates$geom="point"
+    simulated_data <- bind_rows(simulated_data, replicates)
+    
+  }
+  
+  sim_pred[[m]] <- rbind(simulated_data, sim_results)
+}
+
+sim_pred_bound<-bind_rows(sim_pred)
+
+simulated_line<-sim_pred_bound%>%dplyr::filter(geom=="line")
+simulated_point<-sim_pred_bound%>%dplyr::filter(geom=="point")
+
+temp.df<-simulated_point%>%dplyr::select(-"geom")
+
+
+#we want both examples to have almost no mortality at no MHW
+unique_simsp<-unique(sim_pred_bound$species)
+
+
+models <- by(simulated_point, simulated_point$species, function(sub_df) lm(log10(time) ~ temp, data = sub_df))
+
+
+
+merged_temp_tri<-merged_temp_tri_alphas[[1]]
+
+rm(merged_temp_tri_alphas)
+#   user  system elapsed 
+#  71.71   60.69 16739  
+
+
+unique_simsp<-unique(temp.df$species)
+final_surv_crosssim_species<-vector("list",length(unique_simsp))
+r<-vector("list",length(merged_temp_tri))
+
+cl <- makeCluster(2)
+registerDoParallel(cl)
+
+sys.tm <- system.time({
+  for (yy in 1:length(unique_simsp)) {
+    temp.df_sp <- temp.df %>% dplyr::filter(species == unique_simsp[yy])
+    
+    results <- foreach::foreach(i = 1:length(merged_temp_tri), .packages = c('tidyverse', 'ggplot2'), .combine = 'rbind') %dopar% {
+      tmpi <- rezende_min(merged_temp_tri[[i]], temp.df_sp,tc=26)
+      temp_plat_rep <- purrr::map_dfr(seq_len(2), ~merged_temp_tri[[i]])
+      r_subset <- cbind(tmpi, temp_plat_rep)
+      
+      r_subset <- r_subset %>% dplyr::filter(type == "cum.mort")
+      
+      final_surv_crosssim_species_n <- data.frame(
+        'cum.mort' = min(na.omit(r_subset$mort)),
+        "magnitude" = max(r_subset$magnitude,na.rm=T),
+        "duration" = max(r_subset$duration,na.rm=T),
+        "rising_slope" = max(r_subset$rising_slope,na.rm=T),
+        "falling_slope" = max(r_subset$falling_slope,na.rm=T),
+        "area" = max(r_subset$area,na.rm=T),
+        "rep" = max(r_subset$rep,na.rm=T),
+        "mean_i" = max(r_subset$mean_i,na.rm=T),
+        "hdd" = max(r_subset$hdd,na.rm=T),
+        "duration_hob" = max(r_subset$duration_hob,na.rm=T),
+        "peak_date" = max(r_subset$peak_date,na.rm=T),
+        "category" = max(r_subset$category,na.rm=T),
+        "imax_hob" = max(r_subset$imax_hob,na.rm=T),
+        "p_moderate" = max(r_subset$p_moderate,na.rm=T),
+        "p_strong" = max(r_subset$p_strong,na.rm=T),
+        "p_severe" = max(r_subset$p_severe,na.rm=T),
+        "p_extreme" = max(r_subset$p_extreme,na.rm=T),
+        "species" = unique_simsp[yy],
+        "alpha" = 12.75
+      )
+      
+      return(final_surv_crosssim_species_n)
+    }
+    
+    final_surv_crosssim_species[[yy]] <- results
+  } # loop for each species
+})
+
+parallel::stopCluster(cl)
+sys.tm
+
+#27000 seconds, two parallel processes, supercomputer use
+
+
+
+saveRDS(final_surv_crosssim_species,"data/final_surv_crosssim_species_try_ext.RDs")
+#25772
+
+```
+
+```{r,echo=F,warning=F}
+final_surv_crosssim_species<-readRDS("data/final_surv_crosssim_species_try_ext.RDs")
+ext_bound<-bind_rows(final_surv_crosssim_species)
+
+
+ext_bound$hours_dur<-ext_bound$duration/60
+
+ext_bound$label <- ifelse(ext_bound$species == "highct_highz", "Acute Tolerator",
+                                      ifelse(ext_bound$species == "lowct_midz", "Mixed Strategy",
+                                             "Chronic Tolerator"))
+ext_bound<-ext_bound%>%filter(magnitude<=20.1)
+#add points of intersection
+points_data <- data.frame(
+  duration = c(30, 30, 1/60, 1/60,15*24,15*24),
+  magnitude = c(36.1-26, 36.1-26, 44-26, 44-26,30-26,30-26),
+  label = c("Acute Tolerator", "Chronic Tolerator", "Mixed Strategy", "Chronic Tolerator","Acute Tolerator","Mixed Strategy"),
+  colour = c("#377EB8", "#E41A1C", "#4DAF4A", "#E41A1C","#377EB8","#4DAF4A"),
+  shape = c(15, 15, 17, 17,16,16),
+  intersection = c("Acute-Chronic Tolerator", "Acute-Chronic Tolerator", "Chronic Tolerator-Mixed", "Chronic Tolerator-Mixed","Acute Tolerator-Mixed","Acute Tolerator-Mixed")
+)
+
+point_col<-brewer.pal(name="Set1",n=3)
+
+
+ggplot(data = ext_bound, aes(x = duration, y = magnitude)) +
+  geom_tile(aes(fill = cum.mort)) +
+  facet_wrap(~label) +
+  scale_fill_viridis_c() +
+  theme_classic() +
+  labs(x = "Duration (hours)", y = "Magnitude (°C)", fill = "Survival (%)") +
+  geom_rect(aes(xmin=0,xmax=30*24,ymin=0-.22,ymax=8+.22),fill=NA,inherit.aes=F,linewidth=1,color="black",linetype="dashed")+
+  #geom_contour(aes(z = cum.mort),color="white")+ geom_text_contour(aes(z = cum.mort),color="white",fontface="bold")+
+  scale_colour_manual(values = c("#377EB8", "#E41A1C", "#4DAF4A")) +
+  scale_shape_manual(name = "TDT Curve Intersection",
+                     labels = c("Acute-Chronic Tolerator", "Chronic Tolerator-Mixed Strategy","Acute Tolerator-Mixed Strategy"),
+                     values = c(15, 17,16))+
+  guides(color="none")+
+  geom_point(data = points_data, aes(colour = colour, shape = intersection),size=2)
+
+
+ggsave(path = "result_figs/supp",filename="species_combinedplots_three_upper.tif", device='tiff', dpi=300,width=12,height=4,units="in")
+ggsave(path = "result_figs/supp",filename="species_combinedplots_three_upper.pdf", device='pdf', dpi=300,width=12,height=4,units="in")
