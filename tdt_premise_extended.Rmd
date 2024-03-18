@@ -134,7 +134,7 @@ MHW_tri<-function(magnitude_min,magnitude_max,duration_min,duration_max,magnitud
 
 system.time(MHW_tri(magnitude_min,magnitude_max,duration_min,duration_max,magnitude_inc,duration_inc,slope_inc))
 
-#tri_output<-readRDS("data/boundoutput_tri_ext.RDs")
+tri_output<-readRDS("data/boundoutput_tri_ext.RDs")
 tri_data<-tri_output
 tri_data$duration<-tri_data$duration/60 #convert to hours for plotting
 
@@ -250,15 +250,15 @@ system.time(
               }
       
     )
-    #saveRDS(merged_temp_tri,paste0("data/merged_temp_tri_",xx,".RDs"))
+    saveRDS(merged_temp_tri,paste0("data/merged_temp_tri_",xx,".RDs"))
     merged_temp_tri<-purrr::compact(merged_temp_tri)
     
     merged_temp_tri_alphas[[xx]]<-merged_temp_tri
   }
 )
 
-#saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas_ext.RDs")
-#merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas_ext.RDs")
+saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas_ext.RDs")
+merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas_ext.RDs")
 
 try<-merged_temp_tri_alphas[[1]][[1]]
 

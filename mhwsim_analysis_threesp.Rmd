@@ -332,7 +332,7 @@ saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas.RDs")
 ```
 
 ```{r,echo=F}
-merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas.RDs") #reading this file in can take a while
+merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas.RDs") #reading this file in can take a while. Not hosted on github. 
 
 
 
@@ -1326,7 +1326,7 @@ system.time(for (k in 1:length(season_days)){
   
   merged_temp_tri_season<-purrr::compact(merged_temp_tri_season)
   saveRDS(object = merged_temp_tri_season, file = paste0("data/season_mhw_stacks/mhw_stack",k,".Rds"))
-  
+  #not saved on github
 
 }
 )
