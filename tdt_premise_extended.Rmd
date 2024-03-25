@@ -443,6 +443,7 @@ saveRDS(final_surv_crosssim_species,"data/final_surv_crosssim_species_try_ext.RD
 
 ```{r,echo=F,warning=F}
 final_surv_crosssim_species<-readRDS("data/final_surv_crosssim_species_try_ext.RDs")
+
 ext_bound<-bind_rows(final_surv_crosssim_species)
 
 
@@ -465,6 +466,7 @@ points_data <- data.frame(
 point_col<-brewer.pal(name="Set1",n=3)
 
 
+
 ggplot(data = ext_bound, aes(x = duration, y = magnitude)) +
   geom_tile(aes(fill = cum.mort)) +
   facet_wrap(~label) +
@@ -473,12 +475,14 @@ ggplot(data = ext_bound, aes(x = duration, y = magnitude)) +
   labs(x = "Duration (hours)", y = "Magnitude (°C)", fill = "Survival (%)") +
   geom_rect(aes(xmin=0,xmax=30*24,ymin=0-.22,ymax=8+.22),fill=NA,inherit.aes=F,linewidth=1,color="black",linetype="dashed")+
   #geom_contour(aes(z = cum.mort),color="white")+ geom_text_contour(aes(z = cum.mort),color="white",fontface="bold")+
-  scale_colour_manual(values = c("#377EB8", "#E41A1C", "#4DAF4A")) +
+    geom_point(data = points_data, aes(x = duration, y = magnitude,color = colour, shape = intersection),size=2,inherit.aes=F)+
+  #scale_color_manual(values = c("#377EB8", "#E41A1C", "#")) +
+    scale_color_manual(values = c("#E41A1C", "#4DAF4A", "#377EB8")) +
+
   scale_shape_manual(name = "TDT Curve Intersection",
                      labels = c("Acute-Chronic Tolerator", "Chronic Tolerator-Mixed Strategy","Acute Tolerator-Mixed Strategy"),
                      values = c(15, 17,16))+
-  guides(color="none")+
-  geom_point(data = points_data, aes(colour = colour, shape = intersection),size=2)
+  guides(color="none")
 
 
 ggsave(path = "result_figs/supp",filename="species_combinedplots_three_upper.tif", device='tiff', dpi=300,width=12,height=4,units="in")

@@ -17,13 +17,10 @@ require(stats)
 require(rerddap)
 require(cowplot)
 require(gridGraphics)
-require(metR)
-require(SWMPr)
 require(simglm)
 require(zoo)
 require(plotly)
 require(ggpubr)
-library(kableExtra)
 source("hour_fxns_heatwaveR.R")
 source("Thermal_landscape_functions.R")
 
@@ -452,7 +449,7 @@ static2<-static2%>%rename(c("t_coma"="time","assay_temp"="temp"))
         geom_vline(aes(xintercept=as.POSIXct(maxtemptime)+lubridate::days(5)),color="black",linetype="dotted")+
         geom_point(aes(x=max(joined_df_short$time),y=min(exmple_mort$mort)),size=3,color="black",fill="yellow",shape=21,stroke=1)+
         annotate("text",x=as.POSIXct("2022-08-27"),y=75,label=paste0("Cumulative \n Survivorship = ", min_mort,"% "),size=4,fontface="italic")+
-        geom_segment(aes(x=as.POSIXct("2022-08-27"),xend=max(joined_df_short$time)-lubridate::hours(12),y=80,yend=91),arrow=arrow(length=unit(0.2,"cm")))
+        geom_segment(aes(x=as.POSIXct("2022-08-27"),xend=max(joined_df_short$time)-lubridate::hours(12),y=80,yend=90),arrow=arrow(length=unit(0.2,"cm")))
     
     MHW_example
       
