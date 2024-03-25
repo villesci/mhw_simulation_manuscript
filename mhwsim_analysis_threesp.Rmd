@@ -1,6 +1,6 @@
 ---
 title: "Marine Heatwave Simulation Analysis"
-author: "Andrew Villeneuve"
+author: ""
 date: "2024-01-12"
 output: html_document
 bibliography: references.bib
@@ -8,7 +8,7 @@ bibliography: references.bib
 
 # Data analysis introduction
 
-The below analysis creates all figures in Villeneuve and White 2024 MHW simulation paper. The document can be knitted to reproduce the entire analysis. All chunks of this markdown can be run as well, but certain chunks are computationally intensive and can take many hours to complete. These time-consuming chunks are labelled. In key places, we have saved .RDs data files of computational outputs at strategic checkpoints to allow for rapid knitting of the document. These .RDs files are included in the repository for convenience, but are not included in github due to size restrictions.
+The below analysis creates all figures in (citation to be added upon acceptance). The document can be knitted to reproduce the entire analysis. All chunks of this markdown can be run as well, but certain chunks are computationally intensive and can take many hours to complete. These time-consuming chunks are labelled. In key places, we have saved .RDs data files of computational outputs at strategic checkpoints to allow for rapid knitting of the document. These .RDs files are included in the repository for convenience, but are not included in github due to size restrictions.
 
 Two exterior R files are called to define functions used in this analysis. They are as follows:
 

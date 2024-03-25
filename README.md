@@ -1,6 +1,6 @@
 # Marine Heatwave Simulation Analysis
 
-Code and data to replicate results in Villeneuve and White 2024.
+Code and data to replicate results in ... (author and citation info to be added upon acceptance).
 
 There are three major R markdown scripts that replicate analyses and figures from our paper:
 
