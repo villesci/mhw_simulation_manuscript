@@ -1,5 +1,7 @@
 #These functions are from Rezende et al. 2020 Science https://doi.org/10.5061/dryad.stqjq2c1r
- 
+#For Villeneuve and White 2024, we made selective edits to functions,
+#mostly to silence plot outputs for speed performance in tolerance.landscape
+#and to include a Tc parameter in dynamic.landscape. 
 
 #Function to estimate thermal tolerance landscape from static assays
 # General procedure
@@ -57,8 +59,10 @@ tolerance.landscape.np <- function(ta,time){
        time.obs.pred=cbind(data$time,data$time.pred), rsq = rsq)}			
 	
 	
-
-	# Function to estimate survival probability from tolerance landscapes and environmental temperature data
+#Function to estimate survival probability from tolerance landscapes and environmental temperature data
+# this function inherits tc from a custom tl_object object within the rezende_min
+#function. This means that this function must be run as part of the rezende_min function,
+#or that your tolerance.landscape object must contain tc 
 
 
 	
@@ -72,11 +76,11 @@ tolerance.landscape.np <- function(ta,time){
 	  alive <- 100
 	  
 	  for (i in 1:length(ta)) {
-	    if (ta[i] <= tc) {
+	    if (ta[i] <= tc) { #if ta<tc, then no mortality accrued
 	      # Set survival to 100% for temperatures lower than 26 degrees
 	      alive <- c(alive, 100)
 	      time.rel <- c(time.rel, 1)
-	    } else {
+	    } else { #otherwise, mortality can occur. 
 	      if (alive[length(na.omit(alive))] > 0) {
 	        alive <- try(
 	          c(alive, approx(c(0, shift[i] * surv), seq(100, 0, length.out = length(c(0, surv))), xout = time.rel[i] + 1)$y),
@@ -96,11 +100,64 @@ tolerance.landscape.np <- function(ta,time){
 	}
 	
 
-# Function to predict time based on dynamic curve to compare against observed data
+	# with NA
+	
+	
+	dynamic.landscape.np.tc.na <- function(ta, tolerance.landscape) {
+	  surv <- tolerance.landscape$S[, 2]
+	  ta.mn <- tolerance.landscape$ta.mn
+	  z <- tolerance.landscape$z
+	  tc<-tolerance.landscape$tc
+	  shift <- 10^((ta.mn - ta) / z)
+	  time.rel <- 0
+	  alive <- 100
+	  
+	  for (i in 1:length(ta)) {
+	    if (is.na(tc) == TRUE){ #if no tc, then allow mortality at all temperatures
+	      if (alive[length(na.omit(alive))] > 0) {
+	        alive <- try(
+	          c(alive, approx(c(0, shift[i] * surv), seq(100, 0, length.out = length(c(0, surv))), xout = time.rel[i] + 1)$y),
+	          silent = TRUE
+	        )
+	        time.rel <- try(
+	          c(time.rel, approx(seq(100, 0, length.out = length(c(0, surv))), c(0, shift[i + 1] * surv), xout = alive[i + 1])$y),
+	          silent = TRUE
+	        )
+	      } else {
+	        alive <- 0
+	      }
+	    } else{ #if tc, then conditionally calculate mortality based on tc
+	    if (ta[i] <= tc) { #if ta<tc, then no mortality accrued
+	      # Set survival to 100% for temperatures lower than 26 degrees
+	      alive <- c(alive, 100)
+	      time.rel <- c(time.rel, 1)
+	    } else { #otherwise, mortality can occur. 
+	      if (alive[length(na.omit(alive))] > 0) {
+	        alive <- try(
+	          c(alive, approx(c(0, shift[i] * surv), seq(100, 0, length.out = length(c(0, surv))), xout = time.rel[i] + 1)$y),
+	          silent = TRUE
+	        )
+	        time.rel <- try(
+	          c(time.rel, approx(seq(100, 0, length.out = length(c(0, surv))), c(0, shift[i + 1] * surv), xout = alive[i + 1])$y),
+	          silent = TRUE
+	        )
+	      } else {
+	        alive <- 0
+	        }
+	      }
+	    }
+	  }
+	  
+	  out <- data.frame(cbind(ta = ta[1:(length(alive) - 1)], time = (1:length(ta))[1:(length(alive) - 1)], alive = alive[1:(length(alive) - 1)]))
+	}
+	
+	
+# Function to predict time based on dynamic curve to compare against observed data.
+# rezende_min is intended to be a one-stop function for calculating survival.
+# tempseries must contain "time" and "temp" columns. time as POSIXct, temp in C.
+# TDT_object must contain "time" and "temp" columns. time as minutes, temp in C.
+# tc is a temperature in celsius at or below which mortality will not be calculated. Can set as NA.
 
-
-
-###########################
 
 
 	rezende_min<-function(tempseries,TDT_object,tc){
@@ -147,7 +204,6 @@ tolerance.landscape.np <- function(ta,time){
 	                          to=max(tempseries$time,na.rm=T), 
 	                          by = "1 min"),times=2))
 	  return(mort.df)
-	  beep()
 	}
 	
-	
+

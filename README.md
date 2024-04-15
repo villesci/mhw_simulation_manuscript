@@ -1,6 +1,6 @@
 # Marine Heatwave Simulation Analysis
 
-Code and data to replicate results in ... (author and citation info to be added upon acceptance).
+Code and data to replicate results in Villeneuve and White 2024, Journal of Animal Ecology.
 
 There are three major R markdown scripts that replicate analyses and figures from our paper:
 
@@ -10,7 +10,7 @@ There are three major R markdown scripts that replicate analyses and figures fro
 
 *tdt_premise_extended.Rmd - Script to produce supplementary figure 1, which is an extension of the species comparison analysis from the main text. This is computationally intensive, and while all code to replicate results is present, we provide a single data file checkpoint to greatly speed the knitting of the figure.
 
-Additonally, there are two R scripts containing functions from other works used in our analysis. 
+Additionally, there are two R scripts containing functions from other works used in our analysis. 
 * hour_fxns_heatwaveR - modified functions from Schlegel et al. 2018, the heatwaveR package. Functions altered to allow for inputs of data in hourly format. More information within mhw_sim_analysis.Rmd and manuscript text.
 
 * Thermal_landscape_functions.R - modified functions from Rezende et al. 2020 to create thermal tolerance landscapes and produce estimates of mortality using dynamic survival model. More information within mhw_sim_analysis.Rmd and manuscript text.

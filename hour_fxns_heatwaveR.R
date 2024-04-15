@@ -67,7 +67,7 @@ ts2clm_posix <- function(data,
   
   if (length(stats::na.omit(ts_whole$ts_y)) < length(ts_whole$ts_y) & is.numeric(maxPadLength)) {
     ts_whole <- na_interp(doy = ts_whole$doy,
-                          hoy<-ts_whole$hoy,
+                          hoy = ts_whole$hoy,
                           x = ts_whole$ts_x,
                           y = ts_whole$ts_y,
                           maxPadLength = maxPadLength)

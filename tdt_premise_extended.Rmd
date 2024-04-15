@@ -1,13 +1,13 @@
 ---
-title: "tdt_premise_extended_analysis"
+title: "Extended Analysis of Thermal Tolerance Landscapes"
 author: "Andrew Villeneuve"
-date: "2024-03-18"
+date: "2024-04-12"
 output: html_document
 ---
 
 # Readme
 
-This script was written to construct the extended heatmap in the supplementary material of Villeneuve and White 2024 MHW simulation paper. This markdown is meant to be a stand-alone document from the main analysis of the paper (mhwsim_analysis_threesp.Rmd) which can be knitted. Note, however, that a bulk of the analysis is silenced here due to the extreme computational requirements of analyzing more than double the MHW profiles from the original, main text analysis. We ran this code on the University of New Hampshire's supercomputing cluster PREMISE, which took around six hours to complete. We highly suggest running the code found in the main RMD document unless the intention is to completly replicate our results, in which case the first code chunk should be unsilenced. 
+This script was written to construct the extended heatmap in the supplementary material of Villeneuve and White 2024 MHW simulation paper. This markdown is meant to be a stand-alone document from the main analysis of the paper (mhwsim_analysis_threesp.Rmd) which can be knitted. Note, however, that a bulk of the analysis is silenced here due to the extreme computational requirements of analyzing more than double the MHW profiles from the original, main text analysis. We ran this code on the University of New Hampshire's supercomputing cluster PREMISE, which took around six hours to complete. We highly suggest running the code found in the main RMD document unless the intention is to completely replicate our results, in which case the first code chunk should be unsilenced. The R code for running this analysis on a computing cluster is available upon request to Andrew Villeneuve. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -28,7 +28,6 @@ require(doParallel)
 require(rlang)
 require(reshape2)
 require(heatwaveR)
-require(scico)
 require(ggpubr)
 require(SpatialTools)
 
@@ -37,6 +36,12 @@ options(scipen=999)
 
 source("Thermal_landscape_functions.R")
 source("hour_fxns_heatwaveR.R")
+
+    #a function to turn NAs in a data table into zeros (useful for binding datatables of different lengths)
+f_dowle3 = function(DT) {
+  for (j in seq_len(ncol(DT)))
+    set(DT,which(is.na(DT[[j]])),j,0)
+}
 ```
 
 ```{r,eval=F}
@@ -207,7 +212,7 @@ system.time(
         
         #much faster method of left_join and na.replace
         joined_df<-as.data.table(rep_i)[as.data.table(out_res),on='datetime']
-        #system.time(f_dowle3(joined_df)) # another solution
+        system.time(f_dowle3(joined_df)) # another solution
         
         joined_df<-as.data.frame(joined_df)
         joined_df$value<-ifelse(is.na(joined_df$value),0,joined_df$value)

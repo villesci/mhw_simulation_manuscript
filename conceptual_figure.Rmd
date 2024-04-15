@@ -181,6 +181,11 @@ MHW_colours <- c(
       
     }
 
+    #a function to turn NAs in a data table into zeros (useful for binding datatables of different lengths)
+f_dowle3 = function(DT) {
+  for (j in seq_len(ncol(DT)))
+    set(DT,which(is.na(DT[[j]])),j,0)
+}
 
 ```
 
@@ -220,18 +225,10 @@ MHW_colours <- c(
     
 out_res<-clim_obj%>%rename("datetime"=t,"vals"=temp)
 merged_temp_tri<-vector("list",length(unique(tri_data$reps)))
-maxtemptime<-out_res%>%filter(datetime>as.POSIXct('2022-01-01 00:00:00'))%>%filter(vals==max(vals))%>%select(datetime)
+maxtemptime<-out_res%>%dplyr::filter(datetime>as.POSIXct('2022-01-01 00:00:00'))%>%dplyr::filter(vals==max(vals))%>%select(datetime)
 maxtemptime<-as.POSIXct(maxtemptime[,1])
 reps_list<-unique(tri_data$reps)
-clim_2022<-clim_obj%>%filter(t>=as.POSIXct('2022-07-22')&t<as.POSIXct('2022-09-12'))
-
-#fxn to change NA to 0
-f_dowle3 = function(DT) {
-  for (j in seq_len(ncol(DT)))
-    set(DT,which(is.na(DT[[j]])),j,0)
-}
-
-
+clim_2022<-clim_obj%>%dplyr::filter(t>=as.POSIXct('2022-07-22')&t<as.POSIXct('2022-09-12'))
 
 
     start_date_mhw<-maxtemptime-lubridate::days(5)
@@ -244,16 +241,20 @@ f_dowle3 = function(DT) {
     
     #much faster method of left_join and na.replace
     joined_df<-as.data.table(tri_data)[as.data.table(out_res),on='datetime']
-    f_dowle3(joined_df)
+
+    system.time(joined_df<-as.data.table(tri_data)[as.data.table(out_res),on='datetime'])
+    system.time(f_dowle3(joined_df))
     
-    
-    joined_df$combined_temperature <- joined_df$vals + joined_df$value
-    joined_df_short<-joined_df%>%filter(datetime>=start_date_rep&datetime<end_date_rep)
+    joined_df<-as.data.frame(joined_df)
+    joined_df$combined_temperature <- joined_df$vals + joined_df$value #value is triangle, vals is 
+    joined_df_short<-joined_df%>%
+      dplyr::filter(datetime>=start_date_rep)%>%
+      dplyr::filter(datetime<end_date_rep)
     joined_df_short<-joined_df_short%>%rename("time"=datetime,"temp"=combined_temperature)
     
     #now, we categorize each MHW according to the Hobday definition. Note that we have altered code to 1) allow for timeseries in hours (and thus heat wave events classified in hours) and 2) we have removed minimum MHW length (previosuly five days)
     repi_selection<-tri_data%>%select(c(value,datetime))%>%rename("t"=datetime)%>%
-      filter(t>=start_date_rep&t<end_date_rep)
+      dplyr::filter(t>=start_date_rep&t<end_date_rep)
     
     #0.11
     result_df <- clim_2022 %>%
@@ -277,7 +278,7 @@ f_dowle3 = function(DT) {
     joined_df_short$p_extreme<-event_categoriesi$p_extreme
     
     #joined_df_short %>% mutate(group = factor(group, levels = c('1', '0')))
-    maxtemp<-out_res%>%filter(datetime>as.POSIXct('2022-01-01 00:00:00'))%>%filter(vals==max(vals))%>%select(vals)
+    maxtemp<-out_res%>%dplyr::filter(datetime>as.POSIXct('2022-01-01 00:00:00'))%>%dplyr::filter(vals==max(vals))%>%select(vals)
 
       B<-ggplot(data=joined_df_short,aes(x=time,y=temp))+
       geom_flame(aes(y2=thresh,fill="I Moderate"))+
@@ -368,8 +369,8 @@ for(m in 1:nrow(example_TDT)){
 
 sim_pred_bound<-bind_rows(sim_pred)
 
-simulated_line<-sim_pred_bound%>%filter(geom=="line")
-simulated_point<-sim_pred_bound%>%filter(geom=="point")
+simulated_line<-sim_pred_bound%>%dplyr::filter(geom=="line")
+simulated_point<-sim_pred_bound%>%dplyr::filter(geom=="point")
 
 temp.df<-simulated_point%>%select(-"geom")
 
@@ -428,7 +429,7 @@ static2<-static2%>%rename(c("t_coma"="time","assay_temp"="temp"))
     trans <- diff(mort_limits) / diff(temp_limits)
     joined_df_short$temp_trans <- (joined_df_short$temp - min(temp_limits)) * trans + min(mort_limits)
     
-    exmple_mort<-tmpi%>% filter(type=="cum.mort")
+    exmple_mort<-tmpi%>% dplyr::filter(type=="cum.mort")
     min_mort<-round(min(exmple_mort$mort),digits=1)
     
     MHW_example<-ggplot() +

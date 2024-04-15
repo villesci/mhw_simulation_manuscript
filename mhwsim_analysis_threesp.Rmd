@@ -1,18 +1,18 @@
 ---
 title: "Marine Heatwave Simulation Analysis"
-author: ""
-date: "2024-01-12"
+author: "Andrew Villeneuve"
+date: "2024-04-12"
 output: html_document
 bibliography: references.bib
 ---
 
 # Data analysis introduction
 
-The below analysis creates all figures in (citation to be added upon acceptance). The document can be knitted to reproduce the entire analysis. All chunks of this markdown can be run as well, but certain chunks are computationally intensive and can take many hours to complete. These time-consuming chunks are labelled. In key places, we have saved .RDs data files of computational outputs at strategic checkpoints to allow for rapid knitting of the document. These .RDs files are included in the repository for convenience, but are not included in github due to size restrictions.
+The below analysis creates all figures in Villeneuve and White 2024. The document can be knitted to reproduce the entire analysis. All chunks of this markdown can be run as well, but certain chunks are computationally intensive and can take many hours to complete. These time-consuming chunks are labelled. In key places, we have saved .RDs data files of computational outputs at strategic checkpoints to allow for rapid knitting of the document. These .RDs files are included in the repository for convenience, but are not included in github due to size restrictions.
 
 Two exterior R files are called to define functions used in this analysis. They are as follows:
 
--   hour_fxns_heatwaveR.R - This file contains ad hoc functions drawn from the heatwaveR package [@schlegel2018]. We edited these functions for our own use to allow for input of hourly data.
+-   hour_fxns_heatwaveR.R - This file contains ad hoc functions drawn from the heatwaveR package [@schlegel2018]. We edited these functions for our own use to allow for input of hourly data.***NOTE: as of April 12th, 2024, heatwaveR now has hourly capability built into all functions. We recommend still running our ad hoc functions, as this code has not been tested with the updated heatwaveR functions. 
 -   Thermal_landscape_functions.R - This file contains ad hoc functions drawn from @rezende2020 to calculate static thermal tolerance landscapes and calculate survival over variable temperature time series using a dynamic thermal tolerance model. We edited these functions to incorporate the concept of critical temperature @jørgensen2021 , the temperature at which temperature stress starts to become lethal.
 
 ```{r setup, include=FALSE}
@@ -24,11 +24,10 @@ require(tidyr)
 require(ggplot2)
 library(kableExtra)
 require(purrr)
-require(ggridges)
 require(metR)
 require(parallel)
 require(foreach)
-require(ggforce)##
+require(ggforce)
 require(data.table)
 require(zoo)
 require(cowplot)
@@ -36,19 +35,18 @@ require(doParallel)
 require(rlang)
 require(reshape2)
 require(heatwaveR)
-require(ggside)#
-require(metR)## units, sf
+require(ggside)
 require(ggpubr)
-require(terra)## gdal
+require(terra)
 require(SpatialTools)
 
 
 options(scipen=999)
 
 source("Thermal_landscape_functions.R")
-source("hour_fxns_heatwaveR.R")
+source("hour_fxns_heatwaveR.R") #adhoc heatwaveR functions, see note above
 
-#official MHW color scale + cornsilk (this paper)
+#official MHW color scale (Hobday et al. 2018) + cornsilk (this paper)
 MHW_colours <- c(
   'No MHW'="cornsilk3",
   "I Moderate" = "#ffc866",
@@ -57,6 +55,11 @@ MHW_colours <- c(
   "IV Extreme" = "#2d0000"
 )
 
+    #a function to turn NAs in a data table into zeros (useful for binding datatables of different lengths)
+f_dowle3 = function(DT) {
+  for (j in seq_len(ncol(DT)))
+    set(DT,which(is.na(DT[[j]])),j,0)
+}
 ```
 
 # A function for constructing all possible MHWs from a set of parameters
@@ -102,11 +105,7 @@ MHW_tri<-function(magnitude_min,magnitude_max,duration_min,duration_max,magnitud
   expanded<-data.frame(expand.grid('mag_seq'=mag_seq,'dur_seq'=dur_seq,'slope_seq'=slope_seq)) # if we want to control slope
   }
   
-  
-
- 
-
-  #create empty matrix to store results
+    #create empty matrix to store results
   mag_dur_tri <- vector("list", length(mag_seq))
   
   #single loop to create triangles for each row in the expanded dataframe, encapsulating all possible parameters  
@@ -181,11 +180,11 @@ system.time(MHW_tri(magnitude_min,magnitude_max,duration_min,duration_max,magnit
 ```
 
 ```{r,echo=F,warning=F}
-#read in data
+#read in stored data of MHW triangles
 tri_outputme<-readRDS('data/boundoutput_tri.RDs')
 
   
-tri_data<-tri_outputme
+tri_data<-tri_outputme #rename
 tri_data$duration<-tri_data$duration/60 #convert to hours for plotting
 
 tri_data$label<-paste(tri_data$magnitude, "°C", sep = "")
@@ -194,8 +193,6 @@ tri_data$label<-paste(tri_data$magnitude, "°C", sep = "")
 tri_data.select<-tri_data%>%filter(magnitude==c(0.01,2.01,4.01,6.01,8.01)&duration==c(1,121,241,361,481,601,721))
 
 ggplot(data=tri_data.select,aes(x=timestep/60,y=value,group=reps,color=magnitude))+geom_line()+ theme(legend.position="none")+scale_color_viridis_c(option="plasma")+theme_classic()+ylab("Magnitude (°C)")+xlab("Duration (h)")+labs(color="Duration (h)")
-
-#ggsave(path = "result_figs/supp",filename="allmhws.tif", device='tiff', dpi=300,width=6,height=4,units="in")
 
 ```
 
@@ -233,110 +230,110 @@ waves <- function(date_start,date_end, alpha = 0, beta = 1, freq = 24, phi = 0){
 ```{r,include=F,eval=F}
 ####TIME CONSUMING####
 
-year_out<-waves('2022-01-01','2022-12-31',alpha=12,beta=14,freq=365*24)
+year_out<-waves('2022-01-01','2022-12-31',alpha=12,beta=14,freq=365*24)#choice of 2022 is arbitrary
 
-#list of range parameters
+#list of interannual variability parameters
 alpha_list<-c(12.25,12.75,13.5)
+
 merged_temp_tri_alphas<-vector("list",length=length(alpha_list))
 
+
 system.time(
-for (xx in 1:length(alpha_list)){
-  year_thresh<-waves('2022-01-01','2022-12-31',alpha=alpha_list[xx],beta=14,freq=365*24)
+  for (xx in 1:length(alpha_list)){
+    year_thresh<-waves('2022-01-01','2022-12-31',alpha=alpha_list[xx],beta=14,freq=365*24)
+    
+    
+    clim<-data.frame("hoy"=lubridate::hour(year_out$datetime) + (lubridate::yday(year_out$datetime) - 1) * 24,
+                     "doy"=lubridate::yday(year_out$datetime),
+                     "t"=year_out$datetime,
+                     "temp"=year_out$vals,#climatology
+                     "seas"=year_out$vals,#seasonal. Here, is the same as climatology. 
+                     "thresh"=year_thresh$vals, #thresh one of alpha_list values
+                     "thresh_2x"=(year_thresh$vals-year_out$vals)+year_thresh$vals,
+                     "thresh_3x"=(((year_thresh$vals-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals,
+                     "thresh_4x"=(((((year_thresh$vals-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals)
+    
+    
+    clim_2022<-clim%>%dplyr::filter(t>=as.POSIXct('2022-07-22')&t<as.POSIXct('2022-09-12'))#filter to a usable range
+    out_res<-clim_2022%>%dplyr::rename("datetime"=t,"vals"=temp)
+    
+    merged_temp_tri<-vector("list",length(unique(tri_data$reps)))
+    
+    maxtemptime<-out_res%>%dplyr::filter(datetime>as.POSIXct('2022-01-01 00:00:00'))%>%
+      dplyr::filter(vals==max(vals))%>%dplyr::select(datetime) #extracts datetime of highest annual temperature
+    
+    maxtemptime<-as.POSIXct(maxtemptime[,1])
+    reps_list<-unique(tri_data$reps)
+    length(reps_list)
+    
+    #user 2238 system 160 elapsed 3439 on 16gb ram i7 8th gen intel
 
-  
-  clim<-data.frame("hoy"=lubridate::hour(year_out$datetime) + (lubridate::yday(year_out$datetime) - 1) * 24,
-                  "doy"=lubridate::yday(year_out$datetime),
-                  "t"=year_out$datetime,
-                  "temp"=year_out$vals,
-                  "seas"=year_out$vals,
-                  "thresh"=year_thresh$vals,
-                  "thresh_2x"=(year_thresh$vals-year_out$vals)+year_thresh$vals,
-                  "thresh_3x"=(((year_thresh$vals-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals,
-                  "thresh_4x"=(((((year_thresh$vals-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals)-year_out$vals)+year_thresh$vals)
+    syst<-system.time(
+      for (i in 1:length(reps_list)){
+        #setup
+        rep_i<-tri_data%>%dplyr::filter(reps==i) # filter for each MHW
+        start_date_rep<-maxtemptime-floor(max(rep_i$duration/2))*60 #find halfway point and subtract from maximum annual timestamp to give start time
+        end_date_rep<-start_date_rep+ceiling(max(rep_i$duration))*60 # ditto, for end time
+        rep_i$datetime<-seq(from=as.POSIXct(start_date_rep),length.out=ceiling(max(rep_i$timestep)),by="min")
+        
+        #much faster method of left_join and na.replace
+        joined_df<-as.data.table(rep_i)[as.data.table(out_res),on='datetime']
+         system.time(f_dowle3(joined_df))
+        joined_df<-as.data.frame(joined_df)#just making sure! 
+        joined_df$value<-ifelse(is.na(joined_df$value),0,joined_df$value)#NAs become 0
+        joined_df$combined_temperature <- joined_df$vals + joined_df$value # value is from MHW triangles, vals are sine waves
+        joined_df_short<-joined_df%>%dplyr::filter(datetime>=as.POSIXct('2022-07-22 00:00:00')&datetime<as.POSIXct('2022-09-12 00:00:00'))#again, filtering to manageable size
+        joined_df_short<-joined_df_short%>%rename("time"=datetime,"temp"=combined_temperature)
+        
+        #now, we categorize each MHW according to the Hobday definition. Note that we have altered code to 1) allow for timeseries in hours (and thus heat wave events classified in hours) and 2) we have removed minimum MHW length (previosuly five days).
+        
+        
+        repi_selection<-rep_i%>%dplyr::select(c(value,datetime))%>%dplyr::rename("t"=datetime)%>%dplyr::filter(t>='2022-07-22 00:00:00'&t<'2022-09-12 00:00:00')
+        
+        result_df <- clim_2022 %>%
+          left_join(repi_selection, by = "t") %>%
+          mutate(sum_temp_value = coalesce(temp + value, temp))%>%dplyr::select(-c(temp,value))%>%dplyr::rename("temp"=sum_temp_value)
+        
+        
+        events<-detect_event_hour(result_df,date_start='2022-07-22 00:00:00',date_end='2022-09-12 00:00:00')
+        event_categories<-heatwaveR::category(events,S=F,name="simulation")
+        
+        #if more than one category recorded, choose the biggest one (very rare, may be artifact from older analysis) 
+        if (nrow(event_categories)>1){
+          event_categories<-event_categories%>%dplyr::slice(which.max(duration))
+        }
+        
+        joined_df_short$reps<-reps_list[i]
+        joined_df_short$duration_hob<-event_categories$duration
+        joined_df_short$peak_date<-event_categories$peak_date
+        joined_df_short$category<-event_categories$category
+        joined_df_short$imax_hob<-event_categories$i_max
+        joined_df_short$p_moderate<-event_categories$p_moderate
+        joined_df_short$p_strong<-event_categories$p_strong
+        joined_df_short$p_severe<-event_categories$p_severe
+        joined_df_short$p_extreme<-event_categories$p_extreme
+        
 
-
-
-out_res<-clim%>%rename("datetime"=t,"vals"=temp)
-merged_temp_tri<-vector("list",length(unique(tri_data$reps)))
-maxtemptime<-out_res%>%filter(datetime>as.POSIXct('2022-01-01 00:00:00'))%>%filter(vals==max(vals))%>%select(datetime)
-maxtemptime<-as.POSIXct(maxtemptime[,1])
-reps_list<-unique(tri_data$reps)
-clim_2022<-clim%>%filter(t>=as.POSIXct('2022-07-22')&t<as.POSIXct('2022-09-12'))
-
-#fxn to change NA to 0
-f_dowle3 = function(DT) {
-  for (j in seq_len(ncol(DT)))
-    set(DT,which(is.na(DT[[j]])),j,0)
-}
-
-#user 2238 system 160 elapsed 3439  - long, but better than an unoptimized left_join at 14000 seconds
-#time 2, takes 10684s with an additional 22 simulations
-syst<-system.time(
-for (i in reps_list){
-  #setup
-  rep_i<-tri_data%>%dplyr::filter(reps==i) # filter for each MHW
-  start_date_rep<-maxtemptime-floor(max(rep_i$duration/2))*60 #find halfway point and subtract from maximum annual timestamp to give start time
-  end_date_rep<-start_date_rep+ceiling(max(rep_i$duration))*60
-  rep_i$datetime<-seq(from=as.POSIXct(start_date_rep),length.out=ceiling(max(rep_i$timestep)),by="min")
-
-    #much faster method of left_join and na.replace
-    system.time(joined_df<-as.data.table(rep_i)[as.data.table(out_res),on='datetime'])
-    system.time(f_dowle3(joined_df))
-
-
-  joined_df$combined_temperature <- joined_df$vals + joined_df$value
-  joined_df_short<-joined_df%>%filter(datetime>='2022-07-22 00:00:00'&datetime<'2022-09-12 00:00:00')
-  joined_df_short<-joined_df_short%>%rename("time"=datetime,"temp"=combined_temperature)
-  
-  #now, we categorize each MHW according to the Hobday definition. Note that we have altered code to 1) allow for timeseries in hours (and thus heat wave events classified in hours) and 2) we have removed minimum MHW length (previosuly five days)
-repi_selection<-rep_i%>%select(c(value,datetime))%>%rename("t"=datetime)%>%filter(t>='2022-07-22 00:00:00'&t<'2022-09-12 00:00:00')
-
-#0.11
- result_df <- clim_2022 %>%
-  left_join(repi_selection, by = "t") %>%
-  mutate(sum_temp_value = coalesce(temp + value, temp))%>%select(-c(temp,value))%>%rename("temp"=sum_temp_value)
-
-
-events<-detect_event_hour(result_df,date_start='2022-07-22',date_end='2022-09-12')
-event_categories<-heatwaveR::category(events,S=F,name="simulation")
-
-#because the thresholds are not smoothed function, we occasionally get 
-if (nrow(event_categories)>1){
-  event_categories<-event_categories%>%slice(which.max(duration))
-}
-
-joined_df_short$reps<-reps_list[i]
-joined_df_short$duration_hob<-event_categories$duration
-joined_df_short$peak_date<-event_categories$peak_date
-joined_df_short$category<-event_categories$category
-joined_df_short$imax_hob<-event_categories$i_max
-joined_df_short$p_moderate<-event_categories$p_moderate
-joined_df_short$p_strong<-event_categories$p_strong
-joined_df_short$p_severe<-event_categories$p_severe
-joined_df_short$p_extreme<-event_categories$p_extreme
-
-ggplot(joined_df_short,aes(x=time,y=temp))+geom_line()
-
-
- merged_temp_tri[[i]]<-joined_df_short
- rm(joined_df_short)
-}
+        
+        merged_temp_tri[[i]]<-joined_df_short
+        rm(joined_df_short)
+        
+              }
+      
+    )
+    #saveRDS(merged_temp_tri,paste0("data/merged_temp_tri_",xx,".RDs")) #big files, unsilence if you want to run this chunk yourself.
+    merged_temp_tri<-purrr::compact(merged_temp_tri)
+    
+    merged_temp_tri_alphas[[xx]]<-merged_temp_tri
+  }
 )
 
-merged_temp_tri<-purrr::compact(merged_temp_tri)
 
-merged_temp_tri_alphas[[xx]]<-merged_temp_tri
-}
-)
-
-#saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas.RDs")
+#saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas.RDs") #also a big file, unsilence if re-rendering this chunk. 
 ```
 
 ```{r,echo=F,eval=F}
 merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas.RDs") #reading this file in can take a while. Not hosted on github. 
-
-
-
 
 #check data
 scendf_tri<-merged_temp_tri_alphas[[1]][c(511:521)]
@@ -352,29 +349,30 @@ Next, we want to simulate TDT curves for three hypothetical species. We can do t
 ```{r,echo=F}
 set.seed(123)
 
-#Let's create three species: Two of which have intersecting TDT at 30C and 15 days. The third will intersect the high CT species at 30C at 1 day. We will set CTmax
+#Let's create three species: Two of which have intersecting TDT at 30C and 15 days. The third will intersect the high CT species at 30C at 1 day. We will set CTmax.
 
-#first, find potential values of CTmax to work with that intsersect at 15 days at 30C
-temp.seq<-seq(35,50,by=1)
+#first, find potential values of CTmax to work with that intsersect at 15 days at 30C using a loop.
+temp.seq<-seq(35,50,by=1) #ctmax options
 z_list<-vector("list",length=length(temp.seq))
 
 for (i in 1:length(temp.seq)){
-slope<-(log10(15*60*24-1)/(30-temp.seq[i]))
+slope<-(log10(15*60*24-1)/(30-temp.seq[i])) #using tdt formula, insert duration and magnitude
 z_list[[i]]<-(-1/slope)
 }
 
 z_bound<-unlist(z_list)
-sim_vals<-data.frame("ctmax"=temp.seq,"z"=z_bound)
+sim_vals<-data.frame("ctmax"=temp.seq,"z"=z_bound) #candidate ctmax and z values for an intersection
 
-#we select 48C and 44C to start off
+#we select 48C and 44C to start off. looks good. 
 highct_highz<-sim_vals[14,]
 highct_highz$species<-"highct_highz"
 lowct_midz<-sim_vals[10,]
 lowct_midz$species<-"lowct_midz"
 
-#thus far, we have selected tdt curves that intersect in thè middle of our parameter field (15 days, 4C above)
-#we now are interestd in a species that still has a lower CTmax, but will have a lower z such that it intersects the highCTmax Highz species quickly at 12 hours.
+#thus far, we have selected tdt curves that intersect in the middle of our parameter field (15 days, 4C above)
+#we now are interested in a species that still has a lower CTmax, but will have a lower z such that it intersects the highCTmax Highz species quickly at 12 hours.
 
+#this function finds the missing CTmax or z values or time to death if one is missing. 
 equaltdt <- function(CTmax1, CTmax2, z1, z2, timetodeath) {
   if (is.na(CTmax2)) {
     CTmax2 <- CTmax1 - (log10(timetodeath) * (z1 - z2))
@@ -405,10 +403,12 @@ equ_res2<-equaltdt(CTmax1=lowct_lowz$ctmax,CTmax2=lowct_midz$ctmax,z1=lowct_lowz
 equ_res3<-equaltdt(CTmax1=highct_highz$ctmax,CTmax2=lowct_lowz$ctmax,z1=highct_highz$z,z2=lowct_lowz$z,timetodeath=NA)
 
 
-#set ctmax and z parameters
+#set ctmax and z parameters. These are our candidate species. 
 example_TDT<-bind_rows(highct_highz,lowct_midz,lowct_lowz)
 
 kable(example_TDT)
+
+#now simulate tdt data
 
 temp<-rep(seq(26,48,by=2))
 
@@ -455,14 +455,12 @@ simulated_point<-sim_pred_bound%>%filter(geom=="point")
 temp.df<-simulated_point%>%select(-"geom")
 
 
-    #we want both examples to have almost no mortality at no MHW
+#we want both examples to have almost no mortality at no MHW
 unique_simsp<-unique(sim_pred_bound$species)
-
 
 models <- by(simulated_point, simulated_point$species, function(sub_df) lm(log10(time) ~ temp, data = sub_df))
 
     
-
     
 three_species<-ggplot()+
   geom_line(data=simulated_line,aes(x=temp,y=time,color=species),lwd=1)+
@@ -503,7 +501,7 @@ ggsave(path = "result_figs",filename="threespecies_TDT.tif", device='tiff', dpi=
 
 ```
 
-We should check and make sure the CTmax and z estimates from our simulated data make sense (i.e. close to the values we used to simulate the data to begin with). 
+We should check and make sure the CTmax and z estimates from our simulated data make sense (i.e. close to the values we used to simulate the data to begin with). They look pretty good. 
 
 ```{r}
 ctmaxz_df<-data.frame("species"=rep(NA,3),"z"=rep(NA,3),"z_original"=rep(NA,3),"CTmax"=rep(NA,3),"CTmax_original"=rep(NA,3))
@@ -543,15 +541,16 @@ unique_simsp<-unique(temp.df$species)
 final_surv_crosssim_species<-vector("list",length(unique_simsp))
 r<-vector("list",length(merged_temp_tri))
 
-numCores <- detectCores()
-cl <- makeCluster(2)
+cl <- makeCluster(2) #i only use two cores because I run out of machine memory with more. 
 registerDoParallel(cl)
 
 sys.tm <- system.time({
   for (yy in 1:length(unique_simsp)) {
+    #for each species
     temp.df_sp <- temp.df %>% dplyr::filter(species == unique_simsp[yy])
-    
+    #parallelized loop
     results <- foreach::foreach(i = 1:length(merged_temp_tri), .packages = c('dplyr', 'ggplot2'), .combine = 'rbind') %dopar% {
+      #rezende_min is my combined function tolerance landsacpe and dynamic model from Rezende 2014. Takes minutes. 
       tmpi <- rezende_min(merged_temp_tri[[i]], temp.df_sp,tc=26)
       temp_plat_rep <- purrr::map_dfr(seq_len(2), ~merged_temp_tri[[i]])
       r_subset <- cbind(tmpi, temp_plat_rep)
@@ -577,7 +576,7 @@ sys.tm <- system.time({
         "p_severe" = max(r_subset$p_severe),
         "p_extreme" = max(r_subset$p_extreme),
         "species" = unique_simsp[yy],
-        "alpha" = 12.75
+        "alpha" = 12.75 #indicates our interannual variation
       )
       
       return(final_surv_crosssim_species_n)
@@ -595,15 +594,15 @@ sys.tm
 
 
 saveRDS(final_surv_crosssim_species,"data/final_surv_crosssim_species_try.RDs")
-#25772 for 2
-#3267 for 3 on cluster
+#25772 for 2 on personal machine
+#3267 for 3 on computing cluster
 
 
 
 ```
 
 ```{r,include=F,warning=F}
-#This chunk calculates proportions of mortaltiy factors within categories
+#This chunk calculates proportions of mortality factors within categories
 
 final_surv_crosssim_species<-readRDS("data/final_surv_crosssim_species_try.RDs")
 final_surv_crosssim_species_bound<-bind_rows(final_surv_crosssim_species)
@@ -620,16 +619,16 @@ category_list_species<-vector("list",length=length(unique_simsp))
 
 
 for (j in 1:length(unique_simsp)){
-  spi<-final_surv_crosssim_species_bound%>%filter(species==unique_simsp[j])
+  spi<-final_surv_crosssim_species_bound%>%filter(species==unique_simsp[j]) #for each species
 for (i in 1:length(cats)){
 if (is.na(cats[i])) {
     cati <- spi %>% filter(is.na(category))
   } else {cati <- spi %>% filter(category == cats[i])
   }  
-  cati$ceilingmort<-(ceiling(cati$cum.mort/5)*5)
+  cati$ceilingmort<-(ceiling(cati$cum.mort/5)*5) #create bins of 5% survival
   cati$ceilingmort_f<-as.factor(cati$ceilingmort)
   unique_ceiling_mort<-unique(cati$ceilingmort_f)
-  cati$leveldens<-1/nrow(cati)
+  cati$leveldens<-1/nrow(cati) #density
   category_prop_list[[i]]<-cati
 }#category
   category_list_species[[j]]<-category_prop_list
@@ -642,7 +641,7 @@ category_prop_species$category <- ifelse(is.na(category_prop_species$category), 
 
 category_prop_species$ceilingmort_f<-factor(category_prop_species$ceilingmort_f,levels=c(seq(max(category_prop_species$ceilingmort),min(category_prop_species$ceilingmort),by=-5))) 
 
-category_prop_species$category<-factor(category_prop_species$category,levels=c("No MHW","I Moderate","II Strong", "III Severe","IV Extreme")) 
+category_prop_species$category<-factor(category_prop_species$category,levels=c("No MHW","I Moderate","II Strong", "III Severe","IV Extreme")) #label 
 
 ```
 
@@ -650,7 +649,7 @@ category_prop_species$category<-factor(category_prop_species$category,levels=c("
 
 
 
-category_prop_species$hours_dur<-category_prop_species$duration/60
+category_prop_species$hours_dur<-category_prop_species$duration/60 #put into hours
 
 category_prop_species$label <- ifelse(category_prop_species$species == "highct_highz", "Acute Tolerator",
                                      ifelse(category_prop_species$species == "lowct_midz", "Mixed Strategy",
@@ -748,7 +747,7 @@ same_mort_days<-category_prop_species%>%group_by(species)%>%filter(duration==c(1
 
 ```
 
-Now, let's see how altering the thermal adaptation strategy changes sensitivity to different oceanographic definitions of MHWs
+Now, let's see how altering the thermal adaptation strategy changes sensitivity to different oceanographic definitions of MHWs.
 
 ```{r,echo=F,warning=F}
 
@@ -797,15 +796,16 @@ ggsave(path = "result_figs/supp",filename="species_barchart.tif", device='tiff',
 
 # All Alphas (Annual variability)
 
-Now, we can look at one 'species' and how changing variation changes MHW categories. We will classify MHWs using the three different 90th percentile thresholds we calcualted earlier, at 0.25, 0.75, and 1.5 oC above climatology.
+Now, we can look at one 'species' (acute tolerator) and how changing variation changes MHW categories. We will classify MHWs using the three different 90th percentile thresholds we calcualted earlier, at 0.25, 0.75, and 1.5 °C above climatology.
 
 ```{r,eval=F,echo=F}
 ####TIME CONSUMING####
 
+#since changing the internannual variation just changes thresholds, we can re-use the tolerance landscape for the species.
 
 alpha_length<-length(merged_temp_tri_alphas)
-alpha_list_short<-c(12.25,12.75,13.5)
-surv_crosssim_alphas<-data.frame(
+alpha_list_short<-c(12.25,12.75,13.5) # our interannual variation combinations
+surv_crosssim_alphas<-data.frame( #yes this is ugly but we're rolling with it
         'cum.mort' =rep(NA,times=527),
         "magnitude" = rep(NA,times=527),
         "duration" = rep(NA,times=527),
@@ -867,6 +867,7 @@ saveRDS(final_surv_crosssim_alphas,"data/final_surv_crosssim_alphas.RDs")
 ```{r,echo=F,eval=F}
 merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas.RDs") #reading this file in can take a while
 
+#get a subset of MHW profiles for a conceptual subpanel
 
 alpha_0.25<-bind_rows(merged_temp_tri_alphas[[1]][[5]],#2 deg 60 min
 merged_temp_tri_alphas[[1]][[180]],#4 deg 10 days
@@ -983,7 +984,7 @@ if (is.na(cats[i])) {
   }
 
   if(nrow(cati)>0){
-  cati$ceilingmort<-(ceiling(cati$cum.mort/5)*5)
+  cati$ceilingmort<-(ceiling(cati$cum.mort/5)*5) # 5% breaks
   cati$ceilingmort_f<-as.factor(cati$ceilingmort)
   unique_ceiling_mort<-unique(cati$ceilingmort_f)
   cati$leveldens<-1/nrow(cati)
@@ -1119,7 +1120,7 @@ ggdraw(alphas_arranged_plot_legend+theme(plot.background = element_rect(fill = "
 ggsave(path = "result_figs",filename="annual_var_combined.tif", device='tiff', dpi=300,width=12,height=8,units="in")
 ```
 
-Now, let's see how altering seasonal variability changes sensitivity to different oceanographic definitions of MHWs
+Now, let's see how altering seasonal variability changes sensitivity to different oceanographic definitions of MHWs.
 
 ```{r,echo=F,earning=F}
 
@@ -1162,7 +1163,7 @@ ggsave(path = "result_figs/supp",filename="alpha_barchart.tif", device='tiff', d
 
 # Seasonality
 
-Now, let's simulate the effect of seasonal occurrence on mortality arising from MHWs.We only look at a single duration (24 days) but the same 17 magnitudes from 0 to 8.
+Now, let's simulate the effect of seasonal occurrence on mortality arising from MHWs. We only look at a single duration (24 days) but the same 17 magnitudes from 0 to 8.
 
 ```{r,echo=F,warning=F}
 
@@ -1269,7 +1270,7 @@ year_out<-waves('2022-01-01 00:01:00','2022-12-31 00:00:00',alpha=12,beta=14,fre
 year_thresh<-waves('2022-01-01 00:01:00','2022-12-31 00:00:00',alpha=12.75,beta=14,freq=365*24)
 
 
-clim<-data.frame("hoy"=lubridate::hour(year_out$datetime) + (lubridate::yday(year_out$datetime) - 1) * 24,
+clim<-data.frame("hoy"=lubridate::hour(year_out$datetime) + (lubridate::yday(year_out$datetime) - 1) * 24, #minus one because we are adding hours to
                  "doy"=lubridate::yday(year_out$datetime),
                  "t"=year_out$datetime,
                  "temp"=year_out$vals,
@@ -1320,8 +1321,9 @@ system.time(for (k in 1:length(season_days)){
     
     #much faster method of left_join and na.replace
     system.time(joined_df<-as.data.table(rep_i)[as.data.table(out_res),on='datetime'])
+    system.time(f_dowle3(joined_df))
 
-    
+    joined_df<-as.data.frame(joined_df)
     joined_df$combined_temperature <- joined_df$vals + joined_df$value
     joined_df_short<-joined_df
     joined_df_short<-joined_df_short%>%rename("t"=datetime,"temp"=combined_temperature)

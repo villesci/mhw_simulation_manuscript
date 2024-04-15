@@ -11,9 +11,9 @@
 
 <meta name="author" content="Andrew Villeneuve" />
 
-<meta name="date" content="2024-03-18" />
+<meta name="date" content="2024-04-12" />
 
-<title>tdt_premise_extended_analysis</title>
+<title>Extended Analysis of Thermal Tolerance Landscapes</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -350,9 +350,10 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">tdt_premise_extended_analysis</h1>
+<h1 class="title toc-ignore">Extended Analysis of Thermal Tolerance
+Landscapes</h1>
 <h4 class="author">Andrew Villeneuve</h4>
-<h4 class="date">2024-03-18</h4>
+<h4 class="date">2024-04-12</h4>
 
 </div>
 
@@ -368,9 +369,10 @@ to the extreme computational requirements of analyzing more than double
 the MHW profiles from the original, main text analysis. We ran this code
 on the University of New Hampshire’s supercomputing cluster PREMISE,
 which took around six hours to complete. We highly suggest running the
-code found in the main RMD document unless the intention is to completly
-replicate our results, in which case the first code chunk should be
-unsilenced.</p>
+code found in the main RMD document unless the intention is to
+completely replicate our results, in which case the first code chunk
+should be unsilenced. The R code for running this analysis on a
+computing cluster is available upon request to Andrew Villeneuve.</p>
 <pre class="r"><code>##################################################
 magnitude_min&lt;-0.01 #0.01 degree minimum magnitude. Analysis does not accept 0 value
 magnitude_max&lt;-20.01 #8 degree duration max. This is in agreement with observed values above climatology across multiple major MHW events
@@ -538,7 +540,7 @@ system.time(
         
         #much faster method of left_join and na.replace
         joined_df&lt;-as.data.table(rep_i)[as.data.table(out_res),on=&#39;datetime&#39;]
-        #system.time(f_dowle3(joined_df)) # another solution
+        system.time(f_dowle3(joined_df)) # another solution
         
         joined_df&lt;-as.data.frame(joined_df)
         joined_df$value&lt;-ifelse(is.na(joined_df$value),0,joined_df$value)
