@@ -255,15 +255,16 @@ system.time(
               }
       
     )
-    saveRDS(merged_temp_tri,paste0("data/merged_temp_tri_",xx,".RDs"))
+    #saveRDS(merged_temp_tri,paste0("data/merged_temp_tri_",xx,".RDs"))
     merged_temp_tri<-purrr::compact(merged_temp_tri)
     
     merged_temp_tri_alphas[[xx]]<-merged_temp_tri
   }
 )
 
-saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas_ext.RDs")
-merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas_ext.RDs")
+#saveRDS(merged_temp_tri_alphas,"data/merged_temp_tri_alphas_ext.RDs")
+#merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas_ext.RDs")
+#Not hosted on github, 5GB. If you want this file, email Drew at drew.villeneuve@unh.edu
 
 try<-merged_temp_tri_alphas[[1]][[1]]
 

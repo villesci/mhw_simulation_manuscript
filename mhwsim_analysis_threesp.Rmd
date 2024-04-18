@@ -333,7 +333,7 @@ system.time(
 ```
 
 ```{r,echo=F,eval=F}
-merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas.RDs") #reading this file in can take a while. Not hosted on github. 
+#merged_temp_tri_alphas<-readRDS("data/merged_temp_tri_alphas.RDs") #reading this file in can take a while. Not hosted on github, 5GB. If you want this file, email Drew at drew.villeneuve@unh.edu
 
 #check data
 scendf_tri<-merged_temp_tri_alphas[[1]][c(511:521)]
@@ -901,7 +901,7 @@ alpha_concept <- alpha_concept %>%
     alpha == 1.5 ~ "+ 1.5°C"
   ))
 
-saveRDS(alpha_concept,"data/alpha_concept.Rds")
+saveRDS(alpha_concept,"data/alpha_concept.RDs")
 ```
 
 ```{r,echo=F,warning=F}

@@ -8,7 +8,7 @@ There are three major R markdown scripts that replicate analyses and figures fro
 
 * conceptual_figure.Rmd - Script to produce conceptual figure panels in the manuscript. A rendered .html file of the markdown is also available. 
 
-*tdt_premise_extended.Rmd - Script to produce supplementary figure 1, which is an extension of the species comparison analysis from the main text. This is computationally intensive, and while all code to replicate results is present, we provide a single data file checkpoint to greatly speed the knitting of the figure.
+* tdt_premise_extended.Rmd - Script to produce supplementary figure 1, which is an extension of the species comparison analysis from the main text. This is computationally intensive, and while all code to replicate results is present, we provide a single data file checkpoint to greatly speed the knitting of the figure.
 
 Additionally, there are two R scripts containing functions from other works used in our analysis. 
 * hour_fxns_heatwaveR - modified functions from Schlegel et al. 2018, the heatwaveR package. Functions altered to allow for inputs of data in hourly format. More information within mhw_sim_analysis.Rmd and manuscript text.
@@ -17,6 +17,6 @@ Additionally, there are two R scripts containing functions from other works used
 
 Finally, there are two folders.
 
-* data - .RDs files that are saved during computationally intensive sections of the analysis, so that they can be read in independent of running their origin code. These files are not necessary to replicate our results.
+* data - .RDs files that are saved during computationally intensive sections of the analysis, so that they can be read in independent of running their origin code. These files are not necessary to replicate our results, but do make it much faster. Note that two .RDs files, merged_temp_tri.RDs and merged_temp_tri_ext.RDs, are not included in this folder due to their large size (5GB). If you want these .RDs files, and cannot render the code due to computational reasons, email Drew at drew.villeneuve@unh.edu
 
 * result_figs - folder for storing figures from analysis. 
