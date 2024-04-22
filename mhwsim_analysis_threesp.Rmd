@@ -479,24 +479,24 @@ three_species<-ggplot()+
     geom_segment(aes(x=25,xend=equ_res1b$tempatdeath,y=equ_res1b$timetodeath,yend=equ_res1b$timetodeath),color="black",linetype="dashed",inherit.aes=F,linewidth=.4)+
   geom_segment(aes(x=equ_res1b$tempatdeath,xend=equ_res1b$tempatdeath,y=0,yend=equ_res1b$timetodeath),color="black",linetype="dashed",inherit.aes=F,linewidth=.4)+
   annotate("text",x=29,y=5000,label=paste0("15 Days, \n" ,equ_res1b$tempatdeath,"°C "),
-           size=2.75)+
-  geom_point(aes(x=equ_res1b$tempatdeath,y=equ_res1b$timetodeath),shape=21,color="black",fill="white")+
+           size=4)+
+  geom_point(aes(x=equ_res1b$tempatdeath,y=equ_res1b$timetodeath),shape=21,size=3,color="black",fill="white")+
   #chronic-mixed
   geom_segment(aes(x=25,xend=equ_res2$tempatdeath,y=equ_res2$timetodeath,yend=equ_res2$timetodeath),color="black",linetype="dashed",inherit.aes=F,linewidth=.4)+
   geom_segment(aes(x=equ_res2$tempatdeath,xend=equ_res2$tempatdeath,y=0,yend=equ_res2$timetodeath),color="black",linetype="dashed",inherit.aes=F,linewidth=.4)+
   annotate("text",x=42.5,y=0.2,label=paste0("1 Minute,  \n",equ_res2$tempatdeath,"°C "),
-           size=2.75)+
-    geom_point(aes(x=equ_res2$tempatdeath,y=equ_res2$timetodeath),shape=21,color="black",fill="white")+
+           size=4)+
+    geom_point(aes(x=equ_res2$tempatdeath,y=equ_res2$timetodeath),shape=21,color="black",,size=3,fill="white")+
   #acute-chronic
 
   geom_segment(aes(x=25,xend=equ_res3$tempatdeath,y=equ_res3$timetodeath,yend=equ_res3$timetodeath),color="black",linetype="dashed",inherit.aes=F,linewidth=.4)+
   geom_segment(aes(x=equ_res3$tempatdeath,xend=equ_res3$tempatdeath,y=0,yend=equ_res3$timetodeath),color="black",linetype="dashed",inherit.aes=F,linewidth=.4)+
   annotate("text",x=37.5,y=9000,label=paste0(round((equ_res3$timetodeath/24),digits=1)," Hours, \n ",round(equ_res3$tempatdeath,digits=1),"°C "),
-           size=2.75)+
-      geom_point(aes(x=equ_res3$tempatdeath,y=equ_res3$timetodeath),shape=21,color="black",fill="white")
+           size=4)+
+      geom_point(aes(x=equ_res3$tempatdeath,y=equ_res3$timetodeath),shape=21,color="black",,size=3,fill="white")
 
 three_species
-ggsave(path = "result_figs",filename="threespecies_TDT.pdf", device='pdf', dpi=300,width=6,height=4,units="in")
+ggsave(path = "result_figs",filename="threespecies_TDT.pdf", device='pdf', dpi=600,width=6,height=4,units="in")
 ggsave(path = "result_figs",filename="threespecies_TDT.tif", device='tiff', dpi=300,width=6,height=4,units="in")
 
 ```
@@ -724,7 +724,7 @@ species_heatmap_plot<-ggplot(category_prop_species2,aes(x=hours_dur,y=magnitude,
   geom_point(data = points_data_whole, aes(x=duration,y=magnitude),fill = c('#E41A1C','#4DAF4A'),color="black",shape = c(24),size=2,inherit.aes=F)+guides(shape="none")
 
 
-ggsave(path = "result_figs",filename="species_heatmap_three.pdf", device='pdf', dpi=300,width=12,height=4,units="in")
+ggsave(path = "result_figs",filename="species_heatmap_three.pdf", device='pdf', dpi=600,width=12,height=4,units="in")
 ggsave(path = "result_figs",filename="species_heatmap_three.tif", device='tiff', dpi=300,width=12,height=4,units="in")
 
 species_arranged_plot<-plot_grid(three_species,
@@ -733,7 +733,7 @@ species_arranged_plot<-plot_grid(three_species,
 
 
 species_arranged_plot
-ggsave(path = "result_figs",filename="species_combinedplots_three.tif", device='tiff', dpi=300,width=12,height=8,units="in")
+ggsave(path = "result_figs",filename="species_combinedplots_three.tif", device='tiff', dpi=600,width=12,height=8,units="in")
 ggsave(path = "result_figs",filename="species_combinedplots_three.pdf", device='pdf', dpi=300,width=12,height=8,units="in")
 ```
 
@@ -788,7 +788,7 @@ species_barplot<-result%>%ggplot()+geom_bar(aes(y=total_leveldens,x=category,fil
 
 species_barplot
 
-ggsave(path = "result_figs/supp",filename="species_barchart.pdf", device='pdf', dpi=300,width=8,height=4,units="in")
+ggsave(path = "result_figs/supp",filename="species_barchart.pdf", device='pdf', dpi=600,width=8,height=4,units="in")
 ggsave(path = "result_figs/supp",filename="species_barchart.tif", device='tiff', dpi=300,width=8,height=4,units="in")
 
 
@@ -956,7 +956,7 @@ leg_combined<-plot_grid(alpha_plasma_leg,alpha_legend,ncol=1)
   
 alpha_plot_combined<-plot_grid(alpha_concept_plot,leg_combined,ncol=2,rel_widths = c(1,0.4))
 #alpha_plot_combined
-ggsave(path = "result_figs",filename="alpha_heatmap_three_concept.pdf", device='pdf', dpi=300,width=8,height=6,units="in")
+ggsave(path = "result_figs",filename="alpha_heatmap_three_concept.pdf", device='pdf', dpi=600,width=8,height=6,units="in")
 ggsave(path = "result_figs",filename="alpha_heatmap_three_concept.tif", device='tiff', dpi=300,width=8,height=6,units="in")
 ```
 
@@ -1583,7 +1583,7 @@ occ_arranged_plot_legend<-plot_grid(occ_arranged_plot,legend_occ_combined,ncol=2
 #remove artifacts around legends
 ggdraw(occ_arranged_plot_legend+theme(plot.background = element_rect(fill = "white", color = NA)))
 
-ggsave(path = "result_figs",filename="timeseries_survprop.pdf", device='pdf', dpi=300,width=6,height=8,units="in")
+ggsave(path = "result_figs",filename="timeseries_survprop.pdf", device='pdf', dpi=600,width=6,height=8,units="in")
 ggsave(path = "result_figs",filename="timeseries_survprop.tif", device='tiff', dpi=300,width=6,height=8,units="in")
 
 ```
@@ -1679,8 +1679,8 @@ occ_barplot<-ggplot(data=comparison_short,aes(x=category,y=proportion,fill=ceili
 
 occ_barplot
 
-ggsave(path = "result_figs/supp","seasonal_occ_barplot.pdf",device="pdf",width=12,height=8,units=c("in")) 
-ggsave(path = "result_figs/supp","seasonal_occ_barplot.tif",device="tiff",width=12,height=8,units=c("in"))  
+ggsave(path = "result_figs/supp","seasonal_occ_barplot.pdf",device="pdf",width=12,height=8,units=c("in"),dpi=600) 
+ggsave(path = "result_figs/supp","seasonal_occ_barplot.tif",device="tiff",width=12,height=8,units=c("in"),dpi=300)  
 
 
 ```

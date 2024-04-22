@@ -302,13 +302,16 @@ clim_2022<-clim_obj%>%dplyr::filter(t>=as.POSIXct('2022-07-22')&t<as.POSIXct('20
       geom_blank(aes(fill="Observed Temperature",value="black"))+
         #guides(fill="none")+
         theme(axis.title.x=element_blank())+
-      geom_segment(aes(x=maxtemptime,xend=maxtemptime,y=26,yend=max(temp)),linetype=3)+
-      geom_segment(aes(x=maxtemptime-lubridate::days(5),xend=maxtemptime+lubridate::days(5),y=26,yend=26),linetype=3)+
+      annotate("segment", x = maxtemptime, xend = maxtemptime, y = 26, yend = 31, linetype = 3)+
+      annotate("segment", x = maxtemptime-lubridate::days(5),xend=maxtemptime+lubridate::days(5),y=26,yend=26,linetype=3)+
+
       scale_y_continuous(limits=c(25.25,31))+
       annotate("text",x=maxtemptime,y=25.4,label="MHW Duration = 10 days",size=4,fontface="italic")+
       annotate("text",x=end_date_mhw+lubridate::days(5),y=30,label="Magnitude =\n 5°C ",size=4,fontface="italic")+
-      geom_segment(aes(x=maxtemptime,xend=maxtemptime-lubridate::hours(2),y=25.6,yend=25.95),arrow=arrow(length=unit(0.2,"cm")))+
-      geom_segment(aes(x=end_date_mhw,xend=maxtemptime+lubridate::minutes(30),y=30,yend=28.5),arrow=arrow(length=unit(0.2,"cm")))
+      annotate("segment", x=maxtemptime,xend=maxtemptime-lubridate::hours(2),y=25.6,yend=25.95,arrow=arrow(length=unit(0.2,"cm")))+
+      annotate("segment", x=end_date_mhw,xend=maxtemptime+lubridate::minutes(30),y=30,yend=28.5,arrow=arrow(length=unit(0.2,"cm")))
+
+
     
     
       B
@@ -461,7 +464,9 @@ static2<-static2%>%rename(c("t_coma"="time","assay_temp"="temp"))
 ```{r,echo=F}
 ggarrange(B,D,MHW_example,nrow=1,ncol=3,labels=c("A","B","C"))
       
-ggsave("result_figs/conceptual_figure.pdf",width=15,height=5,units="in",dpi=300,device='pdf')   
+ggsave("result_figs/conceptual_figure.pdf",width=15,height=5,units="in",dpi=600,device='pdf') 
+ggsave("result_figs/conceptual_figure.svg",width=15,height=5,units="in",dpi=600,device='svg') 
+
 ggsave("result_figs/conceptual_figure.tif",width=15,height=5,units="in",dpi=300,device='tiff')   
 
     
